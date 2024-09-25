@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <source_file.c>"
+    exit 1
+fi
+
+SOURCE_FILE="$1"
+BASENAME=$(basename "$SOURCE_FILE" .c)
+
+gcc -c "$SOURCE_FILE" -o "$BASENAME.o"
+if [ $? -ne 0 ]; then
+    echo "Compilation failed!"
+    exit 1
+fi
+
+gcc "$BASENAME.o" -o "$BASENAME"
+if [ $? -ne 0 ]; then
+    echo "Linking failed!"
+    exit 1
+fi
+
+rm "$BASENAME.o"
+
+echo "Compilation réussie, et fichier objet supprimé."
