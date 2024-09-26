@@ -35,19 +35,22 @@ void ChangeCaller() {
     
     printf("After ChangeToNull:\n");
     printf("head1: %p\n", (void*)head1);
-    printf("head1: %d\n", head1->data); //return the same value as before
+    //printf("head1: %d\n", head1->data); //return the same value as before
+    // err. Segmentation fault (core dumped)
+    // The pointer is NULL, so it can't be dereferenced
     printf("head2: %p\n", (void*)head2);
     // (void*)head1 is used to cast the pointer to a void pointer
     // without this, the compiler will throw a warning
     
     // Free the allocated memory (though it's NULL now, it's good practice)
-    free(head1);
-    free(head2);
-
+    //free(head1);
+    //free(head2);
+/*
     printf("After freeing the memory :\nhead1: %p\n", (void*)head1);
     printf("head2: %p\n", (void*)head2);
-}
 
+*/
+}
 int main() {
     ChangeCaller();
     return 0;
