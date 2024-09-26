@@ -1,0 +1,5 @@
+1. Journal de bord
+2. datetime, entry
+3. default IDE : vim or nano
+4. if not install, ask for installation
+5. selection menu
