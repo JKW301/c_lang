@@ -27,6 +27,12 @@ struct node* BuildOneTwoThree() {
 }
 
 // Function to push a new node at the front of the list
+/**
+ * Pushes a new node with the given data onto the front of the linked list.
+ *
+ * @param headRef A pointer to the head pointer of the linked list.
+ * @param data The data to be stored in the new node.
+ */
 void Push(struct node** headRef, int data) {
     struct node* newNode = NewNode(data);
     newNode->next = *headRef;
