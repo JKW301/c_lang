@@ -134,7 +134,7 @@ void InsertNth(struct node** headRef, int index, int data){
 }
 
 void InsertNthTest() {
-    struct node* head = NULL; // start with the empty list
+    struct node* head = BuildOneTwoThree(); // start with the empty list
     InsertNth(&head, 0, 1); // build {13)
     InsertNth(&head, 1, 2); // build {13, 42}
     InsertNth(&head, 1, 8); // build {13, 5, 42}
