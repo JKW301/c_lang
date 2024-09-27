@@ -3,6 +3,9 @@
  * p. 10
  */
 
+// b+tree pour gérer les tables mutlples
+// sanitizer, valgrind
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -64,9 +67,81 @@ void DeleteList(struct node** headRef){
         current = next;
     }
     *headRef = NULL;
-    if(myList == NULL){
-        printf("List is empty\n");
+}
+
+void Push(struct node** headRef, int data) {
+    struct node* newNode = NewNode(data);
+    newNode->next = *headRef;
+    *headRef = newNode;
+}
+
+
+/*
+ The opposite of Push(). Takes a non-empty list
+ and removes the front node, and returns the data
+ which was in that node.
+*/
+int Length(struct node* head) {
+    int count = 0;
+    struct node* current = head;
+    while (current != NULL) {
+        count++;
+        current = current->next;
     }
+    return count;
+}
+
+int Pop(struct node** headRef) {
+    struct node* head = *headRef;
+    int result = -1;
+    if (head != NULL) {
+        result = head->data;
+        *headRef = head->next;
+        free(head);
+    }
+    return result;
+}
+
+void PopTest() {
+    struct node* head = BuildOneTwoThree(); // build {1, 2, 3}
+    int a = Pop(&head); // deletes "1" node and returns 1
+    int b = Pop(&head); // deletes "2" node and returns 2
+    int c = Pop(&head); // deletes "3" node and returns 3
+    int len = Length(head); // the list is now empty, so len == 0
+    printf("a = %d, b = %d, c = %d, len = %d\n", a, b, c, len);
+}
+
+void InsertNth(struct node** headRef, int index, int data){
+    if(index==0){
+        Push(headRef, data);     
+    } else {
+        struct node* current = *headRef;
+        for(int i = 0; i < index - 1; i++){
+            if(current == NULL){
+                return;
+            }
+            current = current->next;
+        }
+        if(current != NULL){
+            struct node* newNode = NewNode(data);
+            /**
+             * Inserts a new node into the linked list after the current node.
+            */
+            newNode->next = current->next;
+            current->next = newNode;
+        }
+    }
+}
+
+void InsertNthTest() {
+    struct node* head = NULL; // start with the empty list
+    InsertNth(&head, 0, 1); // build {13)
+    InsertNth(&head, 1, 2); // build {13, 42}
+    InsertNth(&head, 1, 8); // build {13, 5, 42}
+    printf("List: ");
+    printList(head);
+
+    DeleteList(&head); // clean up after ourselves
 }
 
 int main (int argc, char* argv[]){
@@ -75,8 +150,16 @@ int main (int argc, char* argv[]){
     printList(myList);
     GetNthTest();
 
+    //inserts
+    InsertNthTest();
+
+    
     printf("Deletion of the list\n");
+    
     DeleteList(&myList);
+        if(myList == NULL){
+        printf("List is empty\n");
+    }
     
     
     return 0;
