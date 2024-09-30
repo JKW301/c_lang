@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 // Définition d'une structure pour représenter un étudiant
 struct Etudiant {
@@ -31,23 +32,59 @@ void afficher_ligne(int largeur_nom, int largeur_age, int largeur_moyenne) {
     printf("+\n");
 }
 
+// Fonction pour obtenir un entier depuis l'utilisateur
+int obtenir_entier(char* prompt) {
+    int valeur;
+    char buffer[50];
+
+    while (1) {
+        printf("%s", prompt);
+        fgets(buffer, sizeof(buffer), stdin);
+        if (sscanf(buffer, "%d", &valeur) == 1) {
+            break;  // Entrée valide
+        } else {
+            printf("Erreur : veuillez entrer un entier valide.\n");
+        }
+    }
+
+    return valeur;
+}
+
+// Fonction pour obtenir un flottant depuis l'utilisateur
+float obtenir_flottant(char* prompt) {
+    float valeur;
+    char buffer[50];
+
+    while (1) {
+        printf("%s", prompt);
+        fgets(buffer, sizeof(buffer), stdin);
+        if (sscanf(buffer, "%f", &valeur) == 1) {
+            break;  // Entrée valide
+        } else {
+            printf("Erreur : veuillez entrer une valeur décimale valide.\n");
+        }
+    }
+
+    return valeur;
+}
+
 int main() {
     // Création d'un tableau d'étudiants
     struct Etudiant etudiants[3];
     
     // Initialisation manuelle des valeurs pour 3 étudiants
     for (int i = 0; i < 3; i++) {
-        printf("Entrez le nom de l'étudiant %d: ", i+1);
-        scanf("%s", etudiants[i].nom);
-        printf("Entrez l'âge de l'étudiant %d: ", i+1);
-        scanf("%d", &etudiants[i].age);
-        printf("Entrez la moyenne de l'étudiant %d: ", i+1);
-        scanf("%f", &etudiants[i].moyenne);
+        printf("Entrez le nom de l'étudiant %d: ", i + 1);
+        fgets(etudiants[i].nom, sizeof(etudiants[i].nom), stdin);
+        etudiants[i].nom[strcspn(etudiants[i].nom, "\n")] = 0;  // Enlève le saut de ligne
+
+        etudiants[i].age = obtenir_entier("Entrez l'âge de l'étudiant : ");
+        etudiants[i].moyenne = obtenir_flottant("Entrez la moyenne de l'étudiant : ");
     }
 
     // Calcul de la largeur maximale de chaque colonne
     int largeur_nom = max_longueur_nom(etudiants, 3); // Largeur dynamique pour le nom
-    int largeur_age = strlen("Age");  // Utilisation du titre "Age" car il est toujours plus large que l'âge lui-même
+    int largeur_age = strlen("Age");  // Utilisation du titre "Age"
     int largeur_moyenne = strlen("Moyenne");  // Utilisation du titre "Moyenne"
 
     // Affichage du tableau avec en-têtes
