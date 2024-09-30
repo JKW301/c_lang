@@ -49,6 +49,12 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         statement->type = STATEMENT_SELECT;
         return PREPARE_SUCCESS;
     }
+    // quitter le programmme si on saisi "exit"
+    if (strcmp(input_buffer->buffer, "exit") == 0) {
+        close_input_buffer(input_buffer);
+        exit(EXIT_SUCCESS);
+    }
+
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
