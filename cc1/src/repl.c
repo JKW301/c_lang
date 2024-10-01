@@ -13,8 +13,9 @@ InputBuffer* new_input_buffer() {
 }
 
 void print_prompt() {
-    printf("db > ");
+    printf("\033[35mdb > \033[0m");  // \033[35m pour magenta, \033[0m pour réinitialiser la couleur
 }
+
 
 void read_input(InputBuffer* input_buffer) {
     ssize_t bytes_read = getline(&(input_buffer->buffer), &(input_buffer->buffer_length), stdin);
@@ -53,11 +54,33 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
     }
     if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
         statement->type = STATEMENT_INSERT;
+        
+        // Supposons que la commande est au format "insert nom_table valeur1 valeur2 valeur3"
+        // Vous pouvez ajuster le nombre de valeurs selon votre design
+        char* tokens = strtok(input_buffer->buffer, " ");
+        tokens = strtok(NULL, " ");  // Nom de la table
+        strcpy(statement->table_name, tokens);
+        
+        int i = 0;
+        while (tokens != NULL && i < MAX_VALUES) {
+            tokens = strtok(NULL, " ");  // Extraire les valeurs
+            if (tokens != NULL) {
+                strcpy(statement->values[i], tokens);
+                i++;
+            }
+        }
+
         return PREPARE_SUCCESS;
     }
-    if (strcmp(input_buffer->buffer, "select") == 0) {
+
+    if (strncmp(input_buffer->buffer, "select", 6) == 0) {
         statement->type = STATEMENT_SELECT;
-        return PREPARE_SUCCESS;
+        // Extraction du nom de la table après "select "
+        if (sscanf(input_buffer->buffer, "select %s", statement->table_name) == 1) {
+            return PREPARE_SUCCESS;
+        } else {
+            return PREPARE_UNRECOGNIZED_STATEMENT;
+        }
     }
     if (strcmp(input_buffer->buffer, "exit") == 0) {
         statement->type = STATEMENT_EXIT;
@@ -99,12 +122,13 @@ void execute_statement(Statement* statement) {
             }
             break;
 
-        case STATEMENT_INSERT:
-            printf("This is where we would do an insert.\n");
+        case STATEMENT_INSERT: 
+            // Exemple de données à insérer
+            execute_insert(statement, table_list, statement->values);
             break;
 
         case STATEMENT_SELECT:
-            printf("This is where we would do a select.\n");
+            execute_select(statement, table_list);
             break;
 
         case STATEMENT_EXIT:
@@ -116,10 +140,108 @@ void execute_statement(Statement* statement) {
         default:
             printf("Unrecognized command.\n");
             break;
+        }
     }
+
+// void execute_insert(Statement* statement, TableList* table_list, char data[MAX_VALUES][255]) {
+//     // Chercher la table par nom
+//     struct Table* table = table_list->head;
+//     while (table != NULL && strcmp(table->table_name, statement->table_name) != 0) {
+//         table = table->suivante;
+//     }
+//     if (table == NULL) {
+//         printf("Table %s non trouvée.\n", statement->table_name);
+//         return;
+//     }
+
+//     // Parcourir les colonnes et insérer les valeurs correspondantes
+//     struct Colonne* colonne = table->colonnes;
+//     int i = 0;
+//     while (colonne != NULL && i < MAX_VALUES) {
+//         struct Valeur* nouvelle_valeur = (struct Valeur*)malloc(sizeof(struct Valeur));
+//         strcpy(nouvelle_valeur->data, data[i]);  // Assigner la valeur fournie
+//         nouvelle_valeur->suivant = colonne->valeurs;  // Insérer au début de la liste chaînée
+//         colonne->valeurs = nouvelle_valeur;  // Mise à jour de la colonne
+//         colonne = colonne->suivante;
+//         i++;
+//     }
+//     printf("Données insérées dans la table %s.\n", statement->table_name);
+// }
+
+void execute_insert(Statement* statement, TableList* table_list, char data[MAX_VALUES][255]) {
+    // Chercher la table par nom
+    Table* table = table_list->head;
+    while (table != NULL && strcmp(table->table_name, statement->table_name) != 0) {
+        table = table->suivante;
+    }
+    if (table == NULL) {
+        printf("Table %s non trouvée.\n", statement->table_name);
+        return;
+    }
+
+    // Si la table n'a pas encore de colonnes, en créer
+    if (table->colonnes == NULL) {
+        // Créer des colonnes par défaut pour chaque valeur insérée
+        for (int i = 0; i < MAX_VALUES && strlen(data[i]) > 0; i++) {
+            struct Colonne* nouvelle_colonne = (struct Colonne*)malloc(sizeof(struct Colonne));
+            sprintf(nouvelle_colonne->nom, "colonne%d", i + 1);  // Nommez les colonnes colonne1, colonne2, etc.
+            nouvelle_colonne->valeurs = NULL;
+            nouvelle_colonne->suivante = table->colonnes;
+            table->colonnes = nouvelle_colonne;  // Ajout de la colonne à la table
+        }
+    }
+
+    // Parcourir les colonnes et insérer les valeurs correspondantes
+    struct Colonne* colonne = table->colonnes;
+    int i = 0;
+    while (colonne != NULL && i < MAX_VALUES && strlen(data[i]) > 0) {
+        struct Valeur* nouvelle_valeur = (struct Valeur*)malloc(sizeof(struct Valeur));
+        strcpy(nouvelle_valeur->data, data[i]);  // Assigner la valeur fournie
+        nouvelle_valeur->suivant = colonne->valeurs;  // Insérer au début de la liste chaînée
+        colonne->valeurs = nouvelle_valeur;  // Mise à jour de la colonne
+        colonne = colonne->suivante;
+        i++;
+    }
+    printf("Données insérées dans la table %s.\n", statement->table_name);
 }
 
 
+void execute_select(Statement* statement, TableList* table_list) {
+    // Chercher la table par nom
+    Table* table = table_list->head;
+    while (table != NULL && strcmp(table->table_name, statement->table_name) != 0) {
+        table = table->suivante;
+    }
+
+    // Si la table n'existe pas, afficher un message d'erreur
+    if (table == NULL) {
+        printf("Table %s non trouvée.\n", statement->table_name);
+        return;
+    }
+
+    // Parcourir les colonnes et afficher les valeurs
+    struct Colonne* colonne = table->colonnes;
+    if (colonne == NULL) {
+        printf("La table %s n'a pas de colonnes.\n", table->table_name);
+        return;
+    }
+
+    // Afficher les colonnes et leurs valeurs
+    while (colonne != NULL) {
+        printf("Colonne %s : ", colonne->nom);
+        struct Valeur* valeur = colonne->valeurs;
+        if (valeur == NULL) {
+            printf("Aucune donnée dans cette colonne.\n");
+        } else {
+            while (valeur != NULL) {
+                printf("%s -> ", valeur->data);
+                valeur = valeur->suivant;
+            }
+            printf("NULL\n");
+        }
+        colonne = colonne->suivante;
+    }
+}
 
 
 // Créer une nouvelle liste de tables
@@ -140,19 +262,59 @@ void add_table(TableList* list, int table_number, const char* table_name) {
 }
 
 // Sauvegarder la liste de tables dans un fichier
+// void save_table_list_to_file(TableList* list, const char* filename) {
+//     FILE* file = fopen(filename, "w");
+//     if (!file) {
+//         printf("Error opening file %s\n", filename);
+//         return;
+//     }
+//     Table* current = list->head;
+//     while (current != NULL) {
+//         fprintf(file, "%d %s\n", current->table_number, current->table_name);
+//         current = current->next;
+//     }
+//     fclose(file);
+//     printf("Table list saved to %s\n", filename);
+// }
+
+// Fonction pour sauvegarder les tables, colonnes et valeurs dans un fichier
 void save_table_list_to_file(TableList* list, const char* filename) {
     FILE* file = fopen(filename, "w");
     if (!file) {
         printf("Error opening file %s\n", filename);
         return;
     }
-    Table* current = list->head;
-    while (current != NULL) {
-        fprintf(file, "%d %s\n", current->table_number, current->table_name);
-        current = current->next;
+
+    // Parcourir la liste des tables
+    struct Table* current_table = list->head;
+    while (current_table != NULL) {
+        // Sauvegarder le numéro et le nom de la table
+        fprintf(file, "Table %d: %s\n", current_table->table_number, current_table->table_name);
+
+        // Parcourir les colonnes de la table
+        struct Colonne* current_colonne = current_table->colonnes;
+        while (current_colonne != NULL) {
+            // Sauvegarder le nom de la colonne
+            fprintf(file, "  Colonne: %s\n", current_colonne->nom);
+
+            // Parcourir les valeurs de la colonne
+            struct Valeur* current_valeur = current_colonne->valeurs;
+            fprintf(file, "    Valeurs: ");
+            while (current_valeur != NULL) {
+                fprintf(file, "%s ", current_valeur->data);
+                current_valeur = current_valeur->suivant;
+            }
+            fprintf(file, "\n");
+
+            current_colonne = current_colonne->suivante;
+        }
+
+        fprintf(file, "\n");  // Saut de ligne entre les tables
+        current_table = current_table->suivante;
     }
+
     fclose(file);
-    printf("Table list saved to %s\n", filename);
+    printf("Table list with columns and values saved to %s\n", filename);
 }
 
 void load_table_list_from_file(TableList* list, const char* filename) {
@@ -169,7 +331,7 @@ void load_table_list_from_file(TableList* list, const char* filename) {
     fclose(file);
 }
 
-
+/*
 void print_table_list(TableList* list) {
     Table* current = list->head;
     while (current != NULL) {
@@ -177,6 +339,36 @@ void print_table_list(TableList* list) {
         current = current->next;
     }
 }
+*/
+void print_table_list(TableList* list) {
+    Table* current = list->head;
+    while (current != NULL) {
+        print_table_in_frame(current->table_name);  // Encadrer chaque nom de table
+        current = current->next;
+    }
+}
+
+void print_table_in_frame(const char* table_name) {
+    int length = strlen(table_name);
+    
+    // Affichage de la ligne supérieure
+    printf("+");
+    for (int i = 0; i < length + 2; i++) {
+        printf("-");
+    }
+    printf("+\n");
+
+    // Affichage du contenu (nom de la table)
+    printf("| %s |\n", table_name);
+
+    // Affichage de la ligne inférieure
+    printf("+");
+    for (int i = 0; i < length + 2; i++) {
+        printf("-");
+    }
+    printf("+\n");
+}
+
 
 
 void repl() {

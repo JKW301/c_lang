@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>  // pour ssize_t
-
+#define MAX_VALUES 10
 typedef enum {
     META_COMMAND_SUCCESS,
     META_COMMAND_UNRECOGNIZED_COMMAND
@@ -26,6 +26,7 @@ typedef enum {
 typedef struct {
     StatementType type;
     char table_name[255];  // Ajout pour stocker le nom de la table
+    char values[MAX_VALUES][255];
 } Statement;
 
 typedef struct {
@@ -43,13 +44,26 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
 void execute_statement(Statement* statement);
 void repl();
 
+// Structure pour une valeur dans une colonne
+struct Valeur {
+    char data[50];
+    struct Valeur* suivant;
+};
 
+// Structure pour une colonne
+struct Colonne {
+    char nom[50];  // Nom de la colonne
+    struct Valeur* valeurs;  // Liste chaînée des valeurs
+    struct Colonne* suivante;  // Pointeur vers la colonne suivante
+};
 
 // Structure représentant une table
 typedef struct Table {
     int table_number;        // Numéro de la table
     char table_name[255];    // Nom de la table
     struct Table* next;      // Pointeur vers la prochaine table (liste chaînée)
+    struct Colonne* colonnes;  // Liste chaînée de colonnes
+    struct Table* suivante;
 } Table;
 
 // Liste de tables (chaînée)
@@ -62,7 +76,9 @@ TableList* create_table_list();
 void add_table(TableList* list, int table_number, const char* table_name);
 void save_table_list_to_file(TableList* list, const char* filename);
 void load_table_list_from_file(TableList* list, const char* filename);
-
+void print_table_in_frame(const char* table_name);
 void print_table_list(TableList* list);
+void execute_insert(Statement* statement, TableList* table_list, char data[MAX_VALUES][255]);
+void execute_select(Statement* statement, TableList* table_list);
 
 #endif
