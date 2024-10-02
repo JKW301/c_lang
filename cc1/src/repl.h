@@ -4,7 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>  // pour ssize_t
+
 #define MAX_VALUES 10
+
+#define MAX_TABLES 10
+#define MAX_NAME_LEN 20
+
+#define MAX_LINE_LENGTH 255
+
+
 typedef enum {
     META_COMMAND_SUCCESS,
     META_COMMAND_UNRECOGNIZED_COMMAND
@@ -18,6 +26,7 @@ typedef enum {
 typedef enum {
     STATEMENT_INSERT,
     STATEMENT_CREATETABLE,
+    STATEMENT_USE,
     STATEMENT_VIEWTABLES,
     STATEMENT_SELECT,
     STATEMENT_EXIT,
@@ -80,5 +89,6 @@ void print_table_in_frame(const char* table_name);
 void print_table_list(TableList* list);
 void execute_insert(Statement* statement, TableList* table_list, char data[MAX_VALUES][255]);
 void execute_select(Statement* statement, TableList* table_list);
+int use(const char* table_name, TableList* table_list);
 
 #endif
