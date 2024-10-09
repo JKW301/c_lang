@@ -1,0 +1,6 @@
+#### Table: slimshady
+id::INT,nom::string,email::string
+
+#### Table: marshall
+id::INT,nom::string,email::string
+

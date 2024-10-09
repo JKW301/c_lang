@@ -43,332 +43,83 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 }
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
-    if (strncmp(input_buffer->buffer, "create_table", 12) == 0) {
-        statement->type = STATEMENT_CREATETABLE;
-        // Extraire le nom de la table après "create table"
-        sscanf(input_buffer->buffer + 13, "%s", statement->table_name);
-        return PREPARE_SUCCESS;
-    }
-    if (strcmp(input_buffer->buffer, "view_tables") == 0) {
-        statement->type = STATEMENT_VIEWTABLES;
-        return PREPARE_SUCCESS;
-    }
-    if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
-        statement->type = STATEMENT_INSERT;
-        
-        // Supposons que la commande est au format "insert nom_table valeur1 valeur2 valeur3"
-        // Vous pouvez ajuster le nombre de valeurs selon votre design
-        char* tokens = strtok(input_buffer->buffer, " ");
-        tokens = strtok(NULL, " ");  // Nom de la table
-        strcpy(statement->table_name, tokens);
-        
-        int i = 0;
-        while (tokens != NULL && i < MAX_VALUES) {
-            tokens = strtok(NULL, " ");  // Extraire les valeurs
-            if (tokens != NULL) {
-                strcpy(statement->values[i], tokens);
-                i++;
-            }
-        }
+  if (strncmp(input_buffer->buffer, "create", 6) == 0) {
+    statement->type = STATEMENT_CREATETABLE;
+    sscanf(input_buffer->buffer, "create %s", statement->table_name);
+    return PREPARE_SUCCESS;
+  }
+  if (strncmp(input_buffer->buffer, "describe", 8) == 0) {
+    statement->type = STATEMENT_DESCRIBE;
+    sscanf(input_buffer->buffer, "describe %s", statement->table_name);
+    return PREPARE_SUCCESS;
+  }
+  if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
+    statement->type = STATEMENT_INSERT;
+    return PREPARE_SUCCESS;
+  }
 
-        return PREPARE_SUCCESS;
-    }
-
-    if (strncmp(input_buffer->buffer, "select", 6) == 0) {
+  if (strncmp(input_buffer->buffer, "select", 6) == 0) {
         statement->type = STATEMENT_SELECT;
-        // Extraction du nom de la table après "select "
-        if (sscanf(input_buffer->buffer, "select %s", statement->table_name) == 1) {
-            return PREPARE_SUCCESS;
-        } else {
-            return PREPARE_UNRECOGNIZED_STATEMENT;
-        }
-    }
 
-    if(strncmp(input_buffer->buffer, "use", 3) == 0) {
-    statement->type = STATEMENT_USE;
-    // Extraction du nom de la table après "use "
-    if (sscanf(input_buffer->buffer, "use %s", statement->table_name) == 1) {
-        return PREPARE_SUCCESS;
-    } else {
-        return PREPARE_UNRECOGNIZED_STATEMENT;
-    }
-}
-
-
-    if (strcmp(input_buffer->buffer, "exit") == 0) {
-        statement->type = STATEMENT_EXIT;
-        return PREPARE_SUCCESS;
-    }
-    return PREPARE_UNRECOGNIZED_STATEMENT;
-}
-
-void execute_statement(Statement* statement) {
-    static TableList* table_list = NULL;
-    static int table_counter = 1; // Compteur pour les tables
-
-    if (table_list == NULL) {
-        table_list = create_table_list();
-        load_table_list_from_file(table_list, "tables.txt");
-
-        // Mettre à jour le compteur pour éviter les doublons
-        Table* current = table_list->head;
-        while (current != NULL) {
-            if (current->table_number >= table_counter) {
-                table_counter = current->table_number + 1;
-            }
-            current = current->next;
-        }
-    }
-
-    switch (statement->type) {
-        case STATEMENT_CREATETABLE:
-            add_table(table_list, table_counter++, statement->table_name);
-            printf("Table '%s' created.\n", statement->table_name);
-            save_table_list_to_file(table_list, "tables.txt"); // Sauvegarder après création
-            break;
-
-        case STATEMENT_VIEWTABLES:
-            if (table_list->head == NULL) {
-                printf("No tables created yet.\n");
-            } else {
-                print_table_list(table_list);
-            }
-            break;
+        // Extraire le nom de la colonne et de la table
+        char column_name[255];
+        char table_name[255];
         
-        case STATEMENT_USE:
-    printf("Searching for table %s\n", statement->table_name);
-    if (use(statement->table_name, table_list) == 0) {
-        printf("Switched to table: %s\n", statement->table_name);
-    } else {
-        printf("Failed to switch to table: %s\n", statement->table_name);
+        // Exemple d'entrée : "select nom from marshall"
+        int args_parsed = sscanf(input_buffer->buffer, "select %s from %s", column_name, table_name);
+        
+        if (args_parsed < 2) {
+            return PREPARE_UNRECOGNIZED_STATEMENT;  // Format incorrect
+        }
+        
+        // Stocker les valeurs dans la structure statement
+        strcpy(statement->values[0], column_name);  // Stocke le nom de la colonne dans values[0]
+        strcpy(statement->table_name, table_name);  // Stocke le nom de la table
+
+        return PREPARE_SUCCESS;
     }
-    break;
 
+  return PREPARE_UNRECOGNIZED_STATEMENT;
+}
 
-        case STATEMENT_INSERT: 
-            // Exemple de données à insérer
-            execute_insert(statement, table_list, statement->values);
+void execute_statement(Statement* statement, InputBuffer* input_buffer, const char* filename) {
+  switch (statement->type) {
+    case (STATEMENT_EXIT):
+        close_input_buffer(input_buffer);
+      exit(EXIT_SUCCESS);
+        break;
+    case (STATEMENT_CREATETABLE):
+            execute_createtable(statement, filename);
             break;
-
-        case STATEMENT_SELECT:
-            execute_select(statement, table_list);
+    case (STATEMENT_DESCRIBE):
+            execute_describe(statement, filename);
             break;
-
-        case STATEMENT_EXIT:
-            printf("Goodbye!\n");
-            close_input_buffer(new_input_buffer());
-            exit(EXIT_SUCCESS);
+    case (STATEMENT_SELECT):
+            execute_select(statement, filename);
             break;
-
-        default:
-            printf("Unrecognized command.\n");
+    case (STATEMENT_INSERT):
+            printf("insertion\n");
+            //execute_insert(statement, filename);
             break;
-        }
-    }
+  }
+}
 
 
-void execute_insert(Statement* statement, TableList* table_list, char data[MAX_VALUES][255]) {
-    // Chercher la table par nom
-    Table* table = table_list->head;
-    while (table != NULL && strcmp(table->table_name, statement->table_name) != 0) {
-        table = table->suivante;
-    }
-    if (table == NULL) {
-        printf("Table %s non trouvée.\n", statement->table_name);
+// Exemple simplifié de la fonction add_table (vous pouvez remplacer avec votre propre logique)
+void add_table(TableList* list, const char* table_name, const char** columns, int col_count){
+    if (list->num_tables >= MAX_ROWS) {
+        printf("Nombre maximum de tables atteint\n");
         return;
     }
-
-    // Si la table n'a pas encore de colonnes, en créer
-    if (table->colonnes == NULL) {
-        // Créer des colonnes par défaut pour chaque valeur insérée
-        for (int i = 0; i < MAX_VALUES && strlen(data[i]) > 0; i++) {
-            struct Colonne* nouvelle_colonne = (struct Colonne*)malloc(sizeof(struct Colonne));
-            sprintf(nouvelle_colonne->nom, "colonne%d", i + 1);  // Nommez les colonnes colonne1, colonne2, etc.
-            nouvelle_colonne->valeurs = NULL;
-            nouvelle_colonne->suivante = table->colonnes;
-            table->colonnes = nouvelle_colonne;  // Ajout de la colonne à la table
-        }
+    Table* table = &list->tables[list->num_tables];
+    strncpy(table->table_name, table_name, 255);
+    table->num_columns = col_count;
+    for (int i = 0; i < col_count; i++) {
+        strncpy(table->columns[i], columns[i], 255);
     }
-
-    // Parcourir les colonnes et insérer les valeurs correspondantes
-    struct Colonne* colonne = table->colonnes;
-    int i = 0;
-    while (colonne != NULL && i < MAX_VALUES && strlen(data[i]) > 0) {
-        struct Valeur* nouvelle_valeur = (struct Valeur*)malloc(sizeof(struct Valeur));
-        strcpy(nouvelle_valeur->data, data[i]);  // Assigner la valeur fournie
-        nouvelle_valeur->suivant = colonne->valeurs;  // Insérer au début de la liste chaînée
-        colonne->valeurs = nouvelle_valeur;  // Mise à jour de la colonne
-        colonne = colonne->suivante;
-        i++;
-    }
-    printf("Données insérées dans la table %s.\n", statement->table_name);
+    list->num_tables++;
 }
 
-
-void execute_select(Statement* statement, TableList* table_list) {
-    // Chercher la table par nom
-    Table* table = table_list->head;
-    while (table != NULL && strcmp(table->table_name, statement->table_name) != 0) {
-        table = table->suivante;
-    }
-
-    // Si la table n'existe pas, afficher un message d'erreur
-    if (table == NULL) {
-        printf("Table %s non trouvée.\n", statement->table_name);
-        return;
-    }
-
-    // Parcourir les colonnes et afficher les valeurs
-    struct Colonne* colonne = table->colonnes;
-    if (colonne == NULL) {
-        printf("La table %s n'a pas de colonnes.\n", table->table_name);
-        return;
-    }
-
-    // Afficher les colonnes et leurs valeurs
-    while (colonne != NULL) {
-        printf("Colonne %s : ", colonne->nom);
-        struct Valeur* valeur = colonne->valeurs;
-        if (valeur == NULL) {
-            printf("Aucune donnée dans cette colonne.\n");
-        } else {
-            while (valeur != NULL) {
-                printf("%s -> ", valeur->data);
-                valeur = valeur->suivant;
-            }
-            printf("NULL\n");
-        }
-        colonne = colonne->suivante;
-    }
-}
-
-// Function to read and load a table from a file
-int use(const char* table_name, TableList* table_list) {
-    FILE* file = fopen("tables.txt", "r");
-    if (!file) {
-        printf("Could not open file tables.txt\n");
-        return -1;
-    }
-
-    char line[MAX_LINE_LENGTH];
-    while (fgets(line, sizeof(line), file)) {
-        // Remove newline character
-        line[strcspn(line, "\n")] = 0;
-
-        // Compare the table name with the current line
-        if (strcmp(line, table_name) == 0) {
-            printf("Table '%s' found, setting as active.\n", table_name);
-            
-            // Now set this table as the active table in the table_list
-            Table* current = table_list->head;
-            while (current != NULL) {
-                if (strcmp(current->table_name, table_name) == 0) {
-                    // Table found, this is the current active table
-                    printf("Table '%s' is now active.\n", current->table_name);
-                    fclose(file);
-                    return 0;
-                }
-                current = current->next;
-            }
-            printf("Error: Table '%s' was not loaded correctly from the file.\n", table_name);
-            fclose(file);
-            return -1;
-        }
-    }
-
-    printf("Table '%s' not found.\n", table_name);
-    fclose(file);
-    return -1;
-}
-
-
-// Créer une nouvelle liste de tables
-TableList* create_table_list() {
-    TableList* list = (TableList*)malloc(sizeof(TableList));
-    list->head = NULL;
-    return list;
-}
-
-// Ajouter une nouvelle table à la liste
-void add_table(TableList* list, int table_number, const char* table_name) {
-    Table* new_table = (Table*)malloc(sizeof(Table));
-    new_table->table_number = table_number;
-    strncpy(new_table->table_name, table_name, sizeof(new_table->table_name) - 1);
-    new_table->table_name[sizeof(new_table->table_name) - 1] = '\0';
-    new_table->next = list->head;
-    list->head = new_table;
-}
-
-// Fonction pour sauvegarder les tables, colonnes et valeurs dans un fichier
-void save_table_list_to_file(TableList* list, const char* filename) {
-    FILE* file = fopen(filename, "w");
-    if (!file) {
-        printf("Error opening file %s\n", filename);
-        return;
-    }
-
-    // Parcourir la liste des tables
-    struct Table* current_table = list->head;
-    while (current_table != NULL) {
-        // Sauvegarder le numéro et le nom de la table
-        fprintf(file, "Table %d: %s\n", current_table->table_number, current_table->table_name);
-
-        // Parcourir les colonnes de la table
-        struct Colonne* current_colonne = current_table->colonnes;
-        while (current_colonne != NULL) {
-            // Sauvegarder le nom de la colonne
-            fprintf(file, "  Colonne: %s\n", current_colonne->nom);
-
-            // Parcourir les valeurs de la colonne
-            struct Valeur* current_valeur = current_colonne->valeurs;
-            fprintf(file, "    Valeurs: ");
-            while (current_valeur != NULL) {
-                fprintf(file, "%s ", current_valeur->data);
-                current_valeur = current_valeur->suivant;
-            }
-            fprintf(file, "\n");
-
-            current_colonne = current_colonne->suivante;
-        }
-
-        fprintf(file, "\n");  // Saut de ligne entre les tables
-        current_table = current_table->suivante;
-    }
-
-    fclose(file);
-    printf("Table list with columns and values saved to %s\n", filename);
-}
-
-void load_table_list_from_file(TableList* list, const char* filename) {
-    FILE* file = fopen(filename, "r");
-    if (!file) {
-        printf("No existing table file found, starting with an empty list.\n");
-        return;
-    }
-    int table_number;
-    char table_name[255];
-    while (fscanf(file, "%d %s", &table_number, table_name) != EOF) {
-        add_table(list, table_number, table_name);
-    }
-    fclose(file);
-}
-
-/*
-void print_table_list(TableList* list) {
-    Table* current = list->head;
-    while (current != NULL) {
-        printf("Table %d: %s\n", current->table_number, current->table_name);
-        current = current->next;
-    }
-}
-*/
-void print_table_list(TableList* list) {
-    Table* current = list->head;
-    while (current != NULL) {
-        print_table_in_frame(current->table_name);  // Encadrer chaque nom de table
-        current = current->next;
-    }
-}
 
 void print_table_in_frame(const char* table_name) {
     int length = strlen(table_name);
@@ -392,11 +143,201 @@ void print_table_in_frame(const char* table_name) {
 }
 
 
+#define MAX_LINE_LENGTH 255
+#define DELIMITER "#### Table:"
 
+// Fonction pour vérifier si une table existe déjà dans le fichier CSV
+int table_exists_in_file(const char* filename, const char* table_name) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        return 0;  // Si le fichier n'existe pas, la table n'existe pas non plus
+    }
+
+    char line[MAX_LINE_LENGTH];
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0) {
+            // Vérification si c'est la table recherchée
+            char existing_table_name[255];
+            sscanf(line, "#### Table: %254[^\n]", existing_table_name);
+            if (strcmp(existing_table_name, table_name) == 0) {
+                fclose(file);
+                return 1;  // La table existe déjà
+            }
+        }
+    }
+
+    fclose(file);
+    return 0;  // La table n'existe pas
+}
+
+// Fonction pour créer une table dans le fichier CSV
+void create_table(const char* filename, const char* table_name, const char** columns, int num_columns) {
+    // Vérification si la table existe déjà
+    if (table_exists_in_file(filename, table_name)) {
+        printf("Erreur : La table '%s' existe déjà dans le fichier %s.\n", table_name, filename);
+        return;
+    }
+
+    // Ouverture du fichier en mode append
+    FILE *file = fopen(filename, "a");
+    if (file == NULL) {
+        printf("Erreur : Impossible d'ouvrir le fichier %s.\n", filename);
+        return;
+    }
+
+    // Écriture de la nouvelle table
+    fprintf(file, "#### Table: %s\n", table_name);
+    for (int i = 0; i < num_columns; i++) {
+        fprintf(file, "%s", columns[i]);
+        if (i < num_columns - 1) {
+            fprintf(file, ",");
+        }
+    }
+    fprintf(file, "\n\n");
+
+    fclose(file);
+    printf("Table '%s' créée avec succès dans le fichier %s.\n", table_name, filename);
+}
+
+// Exemple d'utilisation dans le main ou la boucle REPL
+void execute_createtable(Statement* statement, const char* filename) {
+    // Exemple de colonnes pour la nouvelle table
+    const char* columns[] = {"id::INT", "nom::string", "email::string"};
+    int num_columns = 3;
+
+    create_table(filename, statement->table_name, columns, num_columns);
+}
+
+
+// Fonction pour décrire les colonnes d'une table
+void describe_table(const char* filename, const char* table_name) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Erreur : Impossible d'ouvrir le fichier %s.\n", filename);
+        return;
+    }
+
+    char line[MAX_LINE_LENGTH];
+    int table_found = 0;
+
+    // Parcourir le fichier pour trouver la table
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0) {
+            // Vérifier si c'est la table recherchée
+            char existing_table_name[255];
+            sscanf(line, "#### Table: %254[^\n]", existing_table_name);
+            if (strcmp(existing_table_name, table_name) == 0) {
+                table_found = 1;
+                // Lire la ligne suivante contenant les colonnes
+                if (fgets(line, sizeof(line), file)) {
+                    printf("Colonnes de la table '%s':\n", table_name);
+                    char* token = strtok(line, ",");
+                    while (token != NULL) {
+                        printf("  %s\n", token);  // Affiche chaque colonne
+                        token = strtok(NULL, ",");
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    fclose(file);
+
+    if (!table_found) {
+        printf("Erreur : Table '%s' non trouvée dans le fichier %s.\n", table_name, filename);
+    }
+}
+
+// Exemple d'utilisation dans le REPL
+void execute_describe(Statement* statement, const char* filename) {
+    describe_table(filename, statement->table_name);
+}
+
+// Fonction pour sélectionner et afficher les valeurs d'une colonne donnée dans une table
+void select_from_table(const char* filename, const char* table_name, const char* column_name) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Erreur : Impossible d'ouvrir le fichier %s.\n", filename);
+        return;
+    }
+
+    char line[MAX_LINE_LENGTH];
+    int table_found = 0;
+    int column_index = -1;
+    char columns[MAX_LINE_LENGTH][255];  // Stockage des noms de colonnes
+    int num_columns = 0;
+
+    // Étape 1 : Trouver la table
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0) {
+            char existing_table_name[255];
+            sscanf(line, "#### Table: %254[^\n]", existing_table_name);
+
+            if (strcmp(existing_table_name, table_name) == 0) {
+                table_found = 1;
+
+                // Étape 2 : Lire les colonnes et trouver l'index de la colonne demandée
+                if (fgets(line, sizeof(line), file)) {
+                    char* token = strtok(line, ",");
+                    while (token != NULL) {
+                        strcpy(columns[num_columns], token);  // Stocker le nom de chaque colonne
+                        if (strncmp(token, column_name, strlen(column_name)) == 0) {
+                            column_index = num_columns;  // Trouver l'index de la colonne demandée
+                        }
+                        num_columns++;
+                        token = strtok(NULL, ",");
+                    }
+
+                    if (column_index == -1) {
+                        printf("Erreur : Colonne '%s' non trouvée dans la table '%s'.\n", column_name, table_name);
+                        fclose(file);
+                        return;
+                    }
+
+                    // Étape 3 : Lire les lignes de données et afficher la valeur de la colonne demandée
+                    printf("Valeurs de la colonne '%s' dans la table '%s':\n", column_name, table_name);
+                    while (fgets(line, sizeof(line), file)) {
+                        if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0 || line[0] == '\n') {
+                            break;  // Fin de la table
+                        }
+                        
+                        // Extraire les valeurs de chaque colonne dans la ligne
+                        token = strtok(line, ",");
+                        int current_column = 0;
+                        while (token != NULL) {
+                            if (current_column == column_index) {
+                                printf("  %s\n", token);  // Afficher la valeur de la colonne sélectionnée
+                            }
+                            current_column++;
+                            token = strtok(NULL, ",");
+                        }
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    fclose(file);
+
+    if (!table_found) {
+        printf("Erreur : Table '%s' non trouvée dans le fichier %s.\n", table_name, filename);
+    }
+}
+
+// Exemple d'utilisation dans le REPL
+void execute_select(Statement* statement, const char* filename) {
+    select_from_table(filename, statement->table_name, statement->values[0]);  // Le nom de la colonne est dans values[0]
+}
+
+/*
+
+
+
+*/
 void repl() {
     InputBuffer* input_buffer = new_input_buffer();
-
-
     while (1) {
         print_prompt();
         read_input(input_buffer);
@@ -417,7 +358,8 @@ void repl() {
                 printf("Unrecognized keyword at start of '%s'.\n", input_buffer->buffer);
                 continue;
         }
-        execute_statement(&statement);
+        const char* filename = "database.csv";  // Define the filename
+        execute_statement(&statement, input_buffer, filename);
         printf("Executed.\n");
     }
 }
