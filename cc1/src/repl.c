@@ -53,10 +53,46 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
     sscanf(input_buffer->buffer, "describe %s", statement->table_name);
     return PREPARE_SUCCESS;
   }
-  if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
-    statement->type = STATEMENT_INSERT;
-    return PREPARE_SUCCESS;
-  }
+    if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
+        statement->type = STATEMENT_INSERT;
+
+        // Extraire le nom de la table et les colonnes spécifiées
+        char columns[255];
+        sscanf(input_buffer->buffer, "insert into %s (%[^)]) values", statement->table_name, columns);
+
+        // Extraire les valeurs
+        char values[255];
+        sscanf(input_buffer->buffer, "values (%[^)])", values);
+
+        // Diviser et nettoyer les colonnes
+        char* token = strtok(columns, ",");
+        int col_index = 0;
+        while (token != NULL && col_index < MAX_COLUMNS) {
+            // Supprimer les espaces autour des colonnes
+            while (*token == ' ') token++;
+            strcpy(statement->columns[col_index], token);
+            col_index++;
+            token = strtok(NULL, ",");
+        }
+        statement->num_columns = col_index;
+
+        // Diviser et nettoyer les valeurs
+        token = strtok(values, ",");
+        int val_index = 0;
+        while (token != NULL && val_index < MAX_COLUMNS) {
+            // Supprimer les espaces et guillemets autour des valeurs
+            while (*token == ' ' || *token == '\'' || *token == '\"') token++;
+            char* end = token + strlen(token) - 1;
+            while (*end == ' ' || *end == '\'' || *end == '\"') end--;
+            end[1] = '\0';
+
+            strcpy(statement->values[val_index], token);
+            val_index++;
+            token = strtok(NULL, ",");
+        }
+
+        return PREPARE_SUCCESS;
+    }
 
   if (strncmp(input_buffer->buffer, "select", 6) == 0) {
         statement->type = STATEMENT_SELECT;
@@ -79,6 +115,7 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         return PREPARE_SUCCESS;
     }
 
+
   return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
@@ -98,11 +135,72 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
             execute_select(statement, filename);
             break;
     case (STATEMENT_INSERT):
-            printf("insertion\n");
-            //execute_insert(statement, filename);
+            execute_insert(statement, filename);
             break;
   }
 }
+
+void execute_insert(Statement* statement, const char* filename) {
+    FILE *file = fopen(filename, "r+");
+    if (file == NULL) {
+        printf("Erreur : Impossible d'ouvrir le fichier %s.\n", filename);
+        return;
+    }
+
+    char line[MAX_LINE_LENGTH];
+    int table_found = 0;
+    int num_columns_table = 0;
+    char columns_table[MAX_COLUMNS][255];  // Stockage des colonnes de la table
+    char* token;
+
+    // Parcourir le fichier pour trouver la table
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0) {
+            char table_name[255];
+            sscanf(line, "#### Table: %254[^\n]", table_name);
+
+            if (strcmp(table_name, statement->table_name) == 0) {
+                table_found = 1;
+
+                // Lire les colonnes de la table
+                if (fgets(line, sizeof(line), file)) {
+                    token = strtok(line, ",");
+                    while (token != NULL) {
+                        strcpy(columns_table[num_columns_table], token);  // Stocker les colonnes
+                        num_columns_table++;
+                        token = strtok(NULL, ",");
+                    }
+
+                    if (num_columns_table != statement->num_columns) {
+                        printf("Erreur : Le nombre de colonnes dans l'insertion (%d) ne correspond pas au nombre de colonnes de la table (%d).\n", 
+                            statement->num_columns, num_columns_table);
+                        fclose(file);
+                        return;
+                    }
+
+                    // Insérer les nouvelles valeurs
+                    for (int i = 0; i < statement->num_columns; i++) {
+                        fprintf(file, "%s", statement->values[i]);
+                        if (i < statement->num_columns - 1) {
+                            fprintf(file, ",");
+                        }
+                    }
+                    fprintf(file, "\n");
+
+                    printf("Ligne insérée avec succès dans la table '%s'.\n", statement->table_name);
+                }
+                break;
+            }
+        }
+    }
+
+    if (!table_found) {
+        printf("Erreur : Table '%s' non trouvée dans le fichier %s.\n", statement->table_name, filename);
+    }
+
+    fclose(file);
+}
+
 
 void print_table_in_frame(const char* table_name) {
     int length = strlen(table_name);
@@ -124,10 +222,6 @@ void print_table_in_frame(const char* table_name) {
     }
     printf("+\n");
 }
-
-
-#define MAX_LINE_LENGTH 255
-#define DELIMITER "#### Table:"
 
 // Fonction pour vérifier si une table existe déjà dans le fichier CSV
 int table_exists_in_file(const char* filename, const char* table_name) {
