@@ -346,3 +346,35 @@ void repl() {
         printf("Executed.\n");
     }
 }
+
+/*
+
+void print_table_list(TableList* list) {
+    Table* current = list->head;
+    while (current != NULL) {
+        print_table_in_frame(current->table_name);  // Encadrer chaque nom de table
+        current = current->next;
+    }
+}
+
+void print_table_in_frame(const char* table_name) {
+    int length = strlen(table_name);
+    
+    // Affichage de la ligne supérieure
+    printf("+");
+    for (int i = 0; i < length + 2; i++) {
+        printf("-");
+    }
+    printf("+\n");
+
+    // Affichage du contenu (nom de la table)
+    printf("| %s |\n", table_name);
+
+    // Affichage de la ligne inférieure
+    printf("+");
+    for (int i = 0; i < length + 2; i++) {
+        printf("-");
+    }
+    printf("+\n");
+}
+*/
