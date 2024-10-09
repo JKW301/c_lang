@@ -104,23 +104,6 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
   }
 }
 
-
-// Exemple simplifié de la fonction add_table (vous pouvez remplacer avec votre propre logique)
-void add_table(TableList* list, const char* table_name, const char** columns, int col_count){
-    if (list->num_tables >= MAX_ROWS) {
-        printf("Nombre maximum de tables atteint\n");
-        return;
-    }
-    Table* table = &list->tables[list->num_tables];
-    strncpy(table->table_name, table_name, 255);
-    table->num_columns = col_count;
-    for (int i = 0; i < col_count; i++) {
-        strncpy(table->columns[i], columns[i], 255);
-    }
-    list->num_tables++;
-}
-
-
 void print_table_in_frame(const char* table_name) {
     int length = strlen(table_name);
     
