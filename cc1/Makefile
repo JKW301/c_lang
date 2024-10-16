@@ -1,25 +1,39 @@
-TARGET = ViewDB
-
 CC = gcc
-
 CFLAGS = -Wall -Werror -Wextra -std=gnu99
-# -WALL pour Warning All = affiche erreurs
-# -Werror = affiche les warning comme eds erreurs
-# -Wextra = affiche des "erreurs", optionnel
-# c11 = version de C standard
 
-SRCS = src/main.c src/repl.c
+# Define object files
+OBJ = src/repl.o src/insert.o src/main.o src/create.o src/describe.o src/select.o
 
-OBJS = $(SRCS:.c=.o)
+# Define the final executable
+ViewDB: $(OBJ)
+	$(CC) $(CFLAGS) -o ViewDB $(OBJ)
 
-# Règle principale pour créer l'exécutable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+# Rule to compile repl.c
+src/repl.o: src/repl.c
+	$(CC) $(CFLAGS) -c src/repl.c -o src/repl.o
 
-# Règle pour compiler chaque fichier source en fichier objet
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
 
-# Nettoyage des fichiers objets et de l'exécutable
+# Rule to compile insert.c
+src/insert.o: src/insert.c
+	$(CC) $(CFLAGS) -c src/insert.c -o src/insert.o
+
+# Rule to compile main.c
+src/main.o: src/main.c
+	$(CC) $(CFLAGS) -c src/main.c -o src/main.o
+
+# Rule to compile create.c
+src/create.o: src/create.c
+	$(CC) $(CFLAGS) -c src/create.c -o src/create.o
+
+#rule to compile describe.c
+src/describe.o: src/describe.c
+	$(CC) $(CFLAGS) -c src/describe.c -o src/describe.o
+
+#rule to compile select.c
+src/select.o: src/select.c
+	$(CC) $(CFLAGS) -c src/select.c -o src/select.o
+
+
+# Clean up object files and the executable
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJ) ViewDB

@@ -1,10 +1,9 @@
 #### Table: slimshady
 id::INT,nom::string,email::string
 
-2,Puff,puff@daddy.com
-
 1,Juan,juan@carlos.com
 
 #### Table: marshall
 id::INT,nom::string,email::string
+
 
