@@ -55,96 +55,89 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
     sscanf(input_buffer->buffer, "describe %s", statement->table_name);
     return PREPARE_SUCCESS;
   }
-    if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
-        statement->type = STATEMENT_INSERT;
+    
+if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
+    statement->type = STATEMENT_INSERT;
 
-        // Extract the table name, columns, and values
-        char columns[255], values[255];
-        sscanf(input_buffer->buffer, "insert into %s (%[^)]) values (%[^)])", statement->table_name, columns, values);
+    // Extract the table name, columns, and values
+    char columns[255], values[255];
+    sscanf(input_buffer->buffer, "insert into %s (%[^)]) values (%[^)])", statement->table_name, columns, values);
+    printf("Table name: %s\n", statement->table_name); // Debug
 
-        // Split columns and values into arrays
-        char* col_token = strtok(columns, ",");
-        char* val_token = strtok(values, ",");
-        
-        // Initialize a linked list for columns and their values
-        struct ColumnValueNode* head = NULL;
-        
-        // Insert column-value pairs into the linked list
-        while (col_token && val_token) {
-            trim_whitespace(col_token);  // Remove spaces around the column name
-            trim_whitespace(val_token);  // Remove spaces and quotes around the value
+    // Initialize a linked list for columns and their values
+    struct ColumnValueNode* head = NULL;
 
-            // Add the pair to the linked list
-            add_column_value_node(&head, col_token, val_token);
+    // Split columns and values into arrays
+    char* col_token = strtok(columns, ",");
+    char* val_token = strtok(values, ",");
 
-            col_token = strtok(NULL, ",");
-            val_token = strtok(NULL, ",");
-        }
+    while (col_token != NULL && val_token != NULL) {
+        trim_whitespace(col_token);
+        trim_whitespace(val_token);
+        add_column_value_node(&head, col_token, val_token);
+        printf("Extracted column: %s\n", col_token); // Debug
+        printf("Extracted value: %s\n", val_token); // Debug
+        col_token = strtok(NULL, ",");
+        val_token = strtok(NULL, ",");
+    }
 
-        // Open the CSV file and find the correct table and column order
-        FILE *file = fopen("database.csv", "r");
-        if (file == NULL) {
-            printf("Erreur : Impossible d'ouvrir le fichier database.csv.\n");
-            return PREPARE_UNRECOGNIZED_STATEMENT;
-        }
+    // Open the CSV file and find the correct table and column order
+    FILE *file = fopen("database.csv", "r");
+    if (file == NULL) {
+        printf("Erreur : Impossible d'ouvrir le fichier database.csv.\n");
+        return PREPARE_UNRECOGNIZED_STATEMENT;
+    }
 
-        char line[MAX_LINE_LENGTH];
-        int table_found = 0;
-        while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "#### Table:", 11) == 0) {
-                char table_name[255];
-                sscanf(line, "#### Table: %s", table_name);
-                if (strcmp(table_name, statement->table_name) == 0) {
-                    table_found = 1;
-
-                    // Read the next line to get the column order
-                    fgets(line, sizeof(line), file);
-                    char* csv_col_token = strtok(line, ",");
-                    struct ColumnValueNode* ordered_list = NULL;
-
-                    // Reorder the linked list based on the column order in the table
-                    while (csv_col_token != NULL) {
-                        trim_whitespace(csv_col_token);
-                        trim_type(csv_col_token);  // Use trim_type here to remove the type (::INT, etc.)
-
-                        struct ColumnValueNode* node = find_column_value_node(head, csv_col_token);
-
-                        if (node != NULL) {
-                            add_column_value_node(&ordered_list, node->column_name, node->value);
-                        } else {
-                            printf("Erreur : Colonne '%s' manquante dans l'insertion.\n", csv_col_token);
-                            fclose(file);
-                            return PREPARE_UNRECOGNIZED_STATEMENT;
-                        }
-                        csv_col_token = strtok(NULL, ",");
-                    }
-
-                    // Create a string of ordered values to pass to execute_insert
-                    char formatted_values[MAX_LINE_LENGTH] = "";
-                    struct ColumnValueNode* current = ordered_list;
-                    while (current != NULL) {
-                        strcat(formatted_values, current->value);
-                        if (current->next != NULL) {
-                            strcat(formatted_values, ",");
-                        }
-                        current = current->next;
-                    }
-
-                    // Store the ordered values in statement
-                    strcpy(statement->formatted_values, formatted_values);
-                    fclose(file);
-                    return PREPARE_SUCCESS;
-                }
+    char line[MAX_LINE_LENGTH];
+    int table_found = 0;
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "#### Table:", 11) == 0) {
+            char table_name[255];
+            sscanf(line, "#### Table: %s", table_name);
+            if (strcmp(table_name, statement->table_name) == 0) {
+                table_found = 1;
+                break;
             }
-        }
-
-        fclose(file);
-        if (!table_found) {
-            printf("Erreur : Table '%s' non trouvée dans le fichier.\n", statement->table_name);
-            return PREPARE_UNRECOGNIZED_STATEMENT;
         }
     }
 
+    if (!table_found) {
+        printf("Erreur : Table '%s' non trouvée dans le fichier CSV.\n", statement->table_name);
+        fclose(file);
+        return PREPARE_UNRECOGNIZED_STATEMENT;
+    }
+
+    // Read the column headers
+    if (fgets(line, sizeof(line), file) == NULL) {
+        printf("Erreur : Impossible de lire les en-têtes de colonnes.\n");
+        fclose(file);
+        return PREPARE_UNRECOGNIZED_STATEMENT;
+    }
+
+    // Check if all columns in the insert statement exist in the CSV
+    char* csv_col_token = strtok(line, ",");
+    while (csv_col_token != NULL) {
+        trim_whitespace(csv_col_token);
+        struct ColumnValueNode* current = head;
+        int column_found = 0;
+        while (current != NULL) {
+            if (strcmp(current->column_name, csv_col_token) == 0) {
+                column_found = 1;
+                break;
+            }
+            current = current->next;
+        }
+        if (!column_found) {
+            printf("Erreur : Colonne '%s' manquante dans l'insertion.\n", csv_col_token);
+            fclose(file);
+            return PREPARE_UNRECOGNIZED_STATEMENT;
+        }
+        csv_col_token = strtok(NULL, ",");
+    }
+
+    fclose(file);
+    return PREPARE_SUCCESS;
+}
     return PREPARE_UNRECOGNIZED_STATEMENT;
 
 
@@ -213,7 +206,7 @@ void execute_insert(Statement* statement, const char* filename) {
             sscanf(line, "#### Table: %s", table_name);
             if (strcmp(table_name, statement->table_name) == 0) {
                 table_found = 1;
-                
+                printf("Inserting row into table '%s': %s\n", statement->table_name, statement->formatted_values); // Debug
                 // Move the cursor to the end of the table and insert the new row
                 fseek(file, 0, SEEK_END);
                 fprintf(file, "%s\n", statement->formatted_values);
