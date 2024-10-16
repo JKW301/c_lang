@@ -101,7 +101,8 @@ void execute_insert(Statement* statement, const char* filename);
 
 //
 void trim_whitespace(char* str);
-void add_column_value_node(struct ColumnValueNode** head, char* column_name, char* value);
+ void add_column_value_node(struct ColumnValueNode** head, const char* column_name, const char* value);
+//void add_column_value_node(struct ColumnValueNode** head, char* column_name, char* value);
 struct ColumnValueNode* find_column_value_node(struct ColumnValueNode* head, char* column_name);
 void trim_type(char* column_name);
 
