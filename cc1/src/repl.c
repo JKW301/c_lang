@@ -181,32 +181,51 @@ if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
             return PREPARE_UNRECOGNIZED_STATEMENT;
         }
     }
-    return PREPARE_UNRECOGNIZED_STATEMENT;
 
+/* ########################################## */
 
-  if (strncmp(input_buffer->buffer, "select", 6) == 0) {
+if (strncmp(input_buffer->buffer, "select", 6) == 0) {
         statement->type = STATEMENT_SELECT;
 
-        // Extraire le nom de la colonne et de la table
+        // Parse the statement to extract column and table names
         char column_name[255];
         char table_name[255];
-        
-        // Exemple d'entrée : "select nom from marshall"
-        int args_parsed = sscanf(input_buffer->buffer, "select %s from %s", column_name, table_name);
-        
-        if (args_parsed < 2) {
-            return PREPARE_UNRECOGNIZED_STATEMENT;  // Format incorrect
-        }
-        
-        // Stocker les valeurs dans la structure statement
-        strcpy(statement->values[0], column_name);  // Stocke le nom de la colonne dans values[0]
-        strcpy(statement->table_name, table_name);  // Stocke le nom de la table
+        int args = sscanf(input_buffer->buffer, "select %s from %s", column_name, table_name);
 
-        return PREPARE_SUCCESS;
+        // Check if the parsed statement matches expected patterns
+        if (args == 2) {
+            // Remove the potential semicolon at the end of table_name
+            char* semicolon_pos = strchr(table_name, ';');
+            if (semicolon_pos != NULL) {
+                *semicolon_pos = '\0';
+            }
+
+            strcpy(statement->column_name, column_name);
+            strcpy(statement->table_name, table_name);
+            return PREPARE_SUCCESS;
+        }
+
+        // Handle wildcard select (e.g., "select * from table_name;")
+        args = sscanf(input_buffer->buffer, "select * from %s", table_name);
+        if (args == 1) {
+            // Remove the potential semicolon at the end of table_name
+            char* semicolon_pos = strchr(table_name, ';');
+            if (semicolon_pos != NULL) {
+                *semicolon_pos = '\0';
+            }
+
+            strcpy(statement->column_name, "*");  // Indicate to select all columns
+            strcpy(statement->table_name, table_name);
+            return PREPARE_SUCCESS;
+        }
+
+        // If parsing fails, return an error
+        printf("Error: Could not parse the SELECT statement.\n");
+        return PREPARE_UNRECOGNIZED_STATEMENT;
     }
 
-
-  return PREPARE_UNRECOGNIZED_STATEMENT;
+    // Default case for unrecognized commands
+    return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
 
@@ -225,6 +244,7 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
             break;
     case (STATEMENT_SELECT):
             execute_select(statement, filename);
+            //printf("select command detected");
             break;
     case (STATEMENT_INSERT):
             execute_insert(statement, filename);

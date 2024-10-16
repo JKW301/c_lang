@@ -3,7 +3,8 @@
         "stdio.h": "c",
         "types.h": "c",
         "string.h": "c",
-        "repl.h": "c"
+        "repl.h": "c",
+        "stdlib.h": "c"
     },
     "C_Cpp.errorSquiggles": "disabled"
 }

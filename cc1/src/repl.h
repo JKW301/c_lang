@@ -44,6 +44,7 @@ typedef struct {
     StatementType type;
     char table_name[255];
     char columns[MAX_COLUMNS][MAX_VALUE_LEN];  // Specified columns in the INSERT statement
+    char column_name[255];
     char values[MAX_COLUMNS][MAX_VALUE_LEN];   // Values associated with the columns
     char formatted_values[MAX_LINE_LENGTH];    // String of ordered values to be inserted
 } Statement;
