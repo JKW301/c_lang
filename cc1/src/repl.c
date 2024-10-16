@@ -239,6 +239,7 @@ void execute_insert(Statement* statement, const char* filename) {
 
     char line[MAX_LINE_LENGTH];
     int table_found = 0;
+    long insertion_point = 0;
 
     // Find the correct table in the CSV file
     while (fgets(line, sizeof(line), file)) {
@@ -247,21 +248,38 @@ void execute_insert(Statement* statement, const char* filename) {
             sscanf(line, "#### Table: %s", table_name);
             if (strcmp(table_name, statement->table_name) == 0) {
                 table_found = 1;
-                printf("Inserting row into table '%s': %s\n", statement->table_name, statement->formatted_values); // Debug
-                // Move the cursor to the end of the table and insert the new row
-                fseek(file, 0, SEEK_END);
-                fprintf(file, "%s\n", statement->formatted_values);
-                printf("Ligne insérée avec succès dans la table '%s'.\n", statement->table_name);
-                break;
+
+                if (fgets(line, sizeof(line), file)) {
+                    insertion_point = ftell(file);
+                    break;
+                }
             }
         }
     }
 
-    fclose(file);
     if (!table_found) {
         printf("Erreur : Table '%s' non trouvée.\n", statement->table_name);
+        fclose(file);
+        return;
     }
+
+    // Read the rest of the file content after the insertion point
+    fseek(file, insertion_point, SEEK_SET);
+    char remaining_content[10000] = "";  // Adjust size as needed
+    char temp_line[MAX_LINE_LENGTH];
+    while (fgets(temp_line, sizeof(temp_line), file)) {
+        strcat(remaining_content, temp_line);
+    }
+
+    // Move the cursor back to the insertion point and add a newline before the new row
+    fseek(file, insertion_point, SEEK_SET);
+    fprintf(file, "\n%s\n", statement->formatted_values);  // Add the new row
+    fprintf(file, "%s", remaining_content);
+
+    fclose(file);
+    printf("Ligne insérée avec succès dans la table '%s'.\n", statement->table_name);
 }
+
 
 // Add a column-value pair to the linked list
 void add_column_value_node(struct ColumnValueNode** head, const char* column_name, const char* value) {
