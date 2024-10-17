@@ -9,6 +9,7 @@
 #define MAX_ROWS 100    // Nombre maximum de lignes dans une table
 #define MAX_VALUE_LEN 255  // Longueur maximale d'une valeur
 #define MAX_LINE_LENGTH 255
+#define MAX_SELECTED_COLUMNS 255
 #define DELIMITER "#### Table:"
 
 typedef enum {
@@ -47,6 +48,9 @@ typedef struct {
     char column_name[255];
     char values[MAX_COLUMNS][MAX_VALUE_LEN];   // Values associated with the columns
     char formatted_values[MAX_LINE_LENGTH];    // String of ordered values to be inserted
+    char selected_columns[MAX_SELECTED_COLUMNS][255];  // Array to store selected column names
+    int num_selected_columns;  // Track the number of selected columns
+    //char formatted_values[MAX_VALUE_LEN];
 } Statement;
 
 
