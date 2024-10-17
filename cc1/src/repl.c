@@ -47,17 +47,17 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
-  if (strncmp(input_buffer->buffer, "create", 6) == 0) {
-    statement->type = STATEMENT_CREATETABLE;
-    sscanf(input_buffer->buffer, "create %s", statement->table_name);
-    return PREPARE_SUCCESS;
-  }
-  if (strncmp(input_buffer->buffer, "describe", 8) == 0) {
-    statement->type = STATEMENT_DESCRIBE;
-    sscanf(input_buffer->buffer, "describe %s", statement->table_name);
-    return PREPARE_SUCCESS;
-  }
-if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
+    if (strncmp(input_buffer->buffer, "create", 6) == 0) {
+        statement->type = STATEMENT_CREATETABLE;
+        sscanf(input_buffer->buffer, "create %s", statement->table_name);
+        return PREPARE_SUCCESS;
+    }
+    if (strncmp(input_buffer->buffer, "describe", 8) == 0) {
+        statement->type = STATEMENT_DESCRIBE;
+        sscanf(input_buffer->buffer, "describe %s", statement->table_name);
+        return PREPARE_SUCCESS;
+    }
+    if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
         struct ColumnValueNode* head = NULL;
         statement->type = STATEMENT_INSERT;
 
@@ -186,18 +186,45 @@ if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
 /*!! Commande SELECT !!*/
 
 /* SELECT * : OK
- * SELECT column_name : !OK
+ * SELECT column_name : OK
+ * SELECT multiple columns : NA
  */
 
-if (strncmp(input_buffer->buffer, "select", 6) == 0) {
+    if (strncmp(input_buffer->buffer, "select", 6) == 0) {
         statement->type = STATEMENT_SELECT;
-        sscanf(input_buffer->buffer, "select %s from %s", statement->column_name, statement->table_name);
-        return PREPARE_SUCCESS;
-    }
 
+        // Extract columns and table name
+        char columns[255];
+        char table_name[255];
+        int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
+
+        if (args == 2) {
+            // Remove any semicolon at the end of the table name
+            char* semicolon_pos = strchr(table_name, ';');
+            if (semicolon_pos != NULL) {
+                *semicolon_pos = '\0';
+            }
+
+            // Split the columns by comma and store them in the Statement struct
+            char* col_token = strtok(columns, ",");
+            int col_index = 0;
+
+            while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
+                trim_whitespace(col_token);  // Remove any extra spaces around the column name
+                strcpy(statement->selected_columns[col_index], col_token);
+                col_index++;
+                col_token = strtok(NULL, ",");
+            }
+
+            statement->num_selected_columns = col_index;
+            strcpy(statement->table_name, table_name);
+            return PREPARE_SUCCESS;
+        }
+    }
     // Default case for unrecognized commands
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
+
 
 /* ########################################## */
 

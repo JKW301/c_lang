@@ -14,9 +14,15 @@ void execute_select(Statement* statement, const char* filename) {
 
     char line[MAX_LINE_LENGTH];
     int table_found = 0;
-    int column_index = -1;
-    int is_wildcard = strcmp(statement->column_name, "*") == 0;
-    
+    int column_indices[MAX_SELECTED_COLUMNS];
+    int is_wildcard = (statement->num_selected_columns == 1 && strcmp(statement->selected_columns[0], "*") == 0);
+    //int num_columns = 0;
+
+    // Initialize column indices to -1 (indicating not found)
+    for (int i = 0; i < MAX_SELECTED_COLUMNS; i++) {
+        column_indices[i] = -1;
+    }
+
     // Find the table in the CSV file
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "#### Table:", 11) == 0) {
@@ -43,29 +49,33 @@ void execute_select(Statement* statement, const char* filename) {
 
         while (token != NULL) {
             trim_whitespace(token);
-            trim_type(token);  // Remove type information for comparison
+            trim_type(token);
             strcpy(columns[index], token);
 
-            // Debug: Print columns found in the table
-            //printf("Found column in table: '%s'\n", columns[index]);
-
-            // Determine the column index if it's not a wildcard select
-            if (!is_wildcard && strcmp(token, statement->column_name) == 0) {
-                column_index = index;
+            // Determine column indices for each selected column
+            if (is_wildcard) {
+                column_indices[index] = index;  // Select all columns for wildcard
+            } else {
+                for (int i = 0; i < statement->num_selected_columns; i++) {
+                    if (strcmp(token, statement->selected_columns[i]) == 0) {
+                        column_indices[i] = index;
+                    }
+                }
             }
 
             index++;
             token = strtok(NULL, ",");
         }
 
-        // Debug: Print the column index detected for SELECT
-        //printf("Detected column index for '%s': %d\n", statement->column_name, column_index);
+        //num_columns = index;
 
-        // If column index wasn't found for a non-wildcard select
-        if (column_index == -1 && !is_wildcard) {
-            printf("Erreur : Colonne '%s' non trouvée dans la table '%s'.\n", statement->column_name, statement->table_name);
-            fclose(file);
-            return;
+        // Verify all selected columns are found
+        for (int i = 0; i < statement->num_selected_columns; i++) {
+            if (column_indices[i] == -1) {
+                printf("Erreur : Colonne '%s' non trouvée dans la table '%s'.\n", statement->selected_columns[i], statement->table_name);
+                fclose(file);
+                return;
+            }
         }
     }
 
@@ -77,20 +87,27 @@ void execute_select(Statement* statement, const char* filename) {
 
         char* token = strtok(line, ",");
         int index = 0;
+        int print_needed = 0;
 
         while (token != NULL) {
             trim_whitespace(token);
 
-            // Print all columns or only the selected column
-            if (is_wildcard || index == column_index) {
-                printf("%s ", token);
+            // Print selected columns or all columns if wildcard
+            for (int i = 0; i < statement->num_selected_columns; i++) {
+                if (is_wildcard || index == column_indices[i]) {
+                    if (print_needed > 0) {
+                        printf(", ");
+                    }
+                    printf("%s", token);
+                    print_needed = 1;
+                }
             }
 
             index++;
             token = strtok(NULL, ",");
         }
 
-        if (is_wildcard || column_index != -1) {
+        if (print_needed) {
             printf("\n");
         }
     }
