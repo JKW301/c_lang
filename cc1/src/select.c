@@ -16,7 +16,7 @@ void execute_select(Statement* statement, const char* filename) {
     int table_found = 0;
     int column_index = -1;
     int is_wildcard = strcmp(statement->column_name, "*") == 0;
-
+    
     // Find the table in the CSV file
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "#### Table:", 11) == 0) {
@@ -35,7 +35,7 @@ void execute_select(Statement* statement, const char* filename) {
         return;
     }
 
-    // Read column names
+    // Read column names from the table
     if (fgets(line, sizeof(line), file)) {
         char* token = strtok(line, ",");
         int index = 0;
@@ -43,7 +43,11 @@ void execute_select(Statement* statement, const char* filename) {
 
         while (token != NULL) {
             trim_whitespace(token);
+            trim_type(token);  // Remove type information for comparison
             strcpy(columns[index], token);
+
+            // Debug: Print columns found in the table
+            //printf("Found column in table: '%s'\n", columns[index]);
 
             // Determine the column index if it's not a wildcard select
             if (!is_wildcard && strcmp(token, statement->column_name) == 0) {
@@ -54,6 +58,9 @@ void execute_select(Statement* statement, const char* filename) {
             token = strtok(NULL, ",");
         }
 
+        // Debug: Print the column index detected for SELECT
+        //printf("Detected column index for '%s': %d\n", statement->column_name, column_index);
+
         // If column index wasn't found for a non-wildcard select
         if (column_index == -1 && !is_wildcard) {
             printf("Erreur : Colonne '%s' non trouvée dans la table '%s'.\n", statement->column_name, statement->table_name);
@@ -62,7 +69,7 @@ void execute_select(Statement* statement, const char* filename) {
         }
     }
 
-    // Read and print rows
+    // Read and print rows from the table
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "#### Table:", 11) == 0) {
             break; // Stop reading at the next table

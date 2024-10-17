@@ -183,51 +183,23 @@ if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
     }
 
 /* ########################################## */
+/*!! Commande SELECT !!*/
+
+/* SELECT * : OK
+ * SELECT column_name : !OK
+ */
 
 if (strncmp(input_buffer->buffer, "select", 6) == 0) {
         statement->type = STATEMENT_SELECT;
-
-        // Parse the statement to extract column and table names
-        char column_name[255];
-        char table_name[255];
-        int args = sscanf(input_buffer->buffer, "select %s from %s", column_name, table_name);
-
-        // Check if the parsed statement matches expected patterns
-        if (args == 2) {
-            // Remove the potential semicolon at the end of table_name
-            char* semicolon_pos = strchr(table_name, ';');
-            if (semicolon_pos != NULL) {
-                *semicolon_pos = '\0';
-            }
-
-            strcpy(statement->column_name, column_name);
-            strcpy(statement->table_name, table_name);
-            return PREPARE_SUCCESS;
-        }
-
-        // Handle wildcard select (e.g., "select * from table_name;")
-        args = sscanf(input_buffer->buffer, "select * from %s", table_name);
-        if (args == 1) {
-            // Remove the potential semicolon at the end of table_name
-            char* semicolon_pos = strchr(table_name, ';');
-            if (semicolon_pos != NULL) {
-                *semicolon_pos = '\0';
-            }
-
-            strcpy(statement->column_name, "*");  // Indicate to select all columns
-            strcpy(statement->table_name, table_name);
-            return PREPARE_SUCCESS;
-        }
-
-        // If parsing fails, return an error
-        printf("Error: Could not parse the SELECT statement.\n");
-        return PREPARE_UNRECOGNIZED_STATEMENT;
+        sscanf(input_buffer->buffer, "select %s from %s", statement->column_name, statement->table_name);
+        return PREPARE_SUCCESS;
     }
 
     // Default case for unrecognized commands
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
+/* ########################################## */
 
 
 void execute_statement(Statement* statement, InputBuffer* input_buffer, const char* filename) {
