@@ -28,6 +28,7 @@ typedef enum {
     STATEMENT_DESCRIBE,
     //STATEMENT_USE,
     //STATEMENT_VIEWTABLES,
+    STATEMENT_DELETETABLE,
     STATEMENT_SELECT,
     STATEMENT_EXIT,
 } StatementType;
@@ -110,5 +111,7 @@ void trim_whitespace(char* str);
 //void add_column_value_node(struct ColumnValueNode** head, char* column_name, char* value);
 struct ColumnValueNode* find_column_value_node(struct ColumnValueNode* head, char* column_name);
 void trim_type(char* column_name);
+
+//delete table
 
 #endif

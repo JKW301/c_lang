@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Werror -Wextra -std=gnu99
 
 # Define object files
-OBJ = src/repl.o src/insert.o src/main.o src/create.o src/describe.o src/select.o
+OBJ = src/repl.o src/insert.o src/main.o src/create.o src/describe.o src/select.o src/delete.o
 
 # Define the final executable
 ViewDB: $(OBJ)
@@ -33,6 +33,9 @@ src/describe.o: src/describe.c
 src/select.o: src/select.c
 	$(CC) $(CFLAGS) -c src/select.c -o src/select.o
 
+# compile delete.c
+src/delete.o: src/delete.c
+	$(CC) $(CFLAGS) -c src/delete.c -o src/delete.o
 
 # Clean up object files and the executable
 clean:

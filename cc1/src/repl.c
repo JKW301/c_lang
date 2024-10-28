@@ -228,6 +228,12 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
     printf("Error: Could not parse the SELECT statement.\n");
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
+    if (strncmp(input_buffer->buffer, "delete", 6) == 0) {
+    statement->type = STATEMENT_DELETETABLE;
+    sscanf(input_buffer->buffer, "delete table %s", statement->table_name);
+    return PREPARE_SUCCESS;
+}
+
 
     // Default case for unrecognized commands
     return PREPARE_UNRECOGNIZED_STATEMENT;
@@ -256,6 +262,10 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
     case (STATEMENT_INSERT):
             execute_insert(statement, filename);
             break;
+    case (STATEMENT_DELETETABLE):
+            execute_delete_table(statement, filename);
+            break;
+
   }
 }
 
