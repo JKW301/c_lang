@@ -16,7 +16,6 @@ void execute_select(Statement* statement, const char* filename) {
     int table_found = 0;
     int column_indices[MAX_SELECTED_COLUMNS];
     int is_wildcard = (statement->num_selected_columns == 1 && strcmp(statement->selected_columns[0], "*") == 0);
-    //int num_columns = 0;
 
     // Initialize column indices to -1 (indicating not found)
     for (int i = 0; i < MAX_SELECTED_COLUMNS; i++) {
@@ -67,11 +66,9 @@ void execute_select(Statement* statement, const char* filename) {
             token = strtok(NULL, ",");
         }
 
-        //num_columns = index;
-
         // Verify all selected columns are found
         for (int i = 0; i < statement->num_selected_columns; i++) {
-            if (column_indices[i] == -1) {
+            if (column_indices[i] == -1 && !is_wildcard) {
                 printf("Erreur : Colonne '%s' non trouvée dans la table '%s'.\n", statement->selected_columns[i], statement->table_name);
                 fclose(file);
                 return;

@@ -187,40 +187,48 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
 
 /* SELECT * : OK
  * SELECT column_name : OK
- * SELECT multiple columns : NA
+ * SELECT multiple columns : OK
  */
 
     if (strncmp(input_buffer->buffer, "select", 6) == 0) {
-        statement->type = STATEMENT_SELECT;
+    statement->type = STATEMENT_SELECT;
 
-        // Extract columns and table name
-        char columns[255];
-        char table_name[255];
-        int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
+    // Extract columns and table name
+    char columns[255];
+    char table_name[255];
+    int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
 
-        if (args == 2) {
-            // Remove any semicolon at the end of the table name
-            char* semicolon_pos = strchr(table_name, ';');
-            if (semicolon_pos != NULL) {
-                *semicolon_pos = '\0';
-            }
-
-            // Split the columns by comma and store them in the Statement struct
-            char* col_token = strtok(columns, ",");
-            int col_index = 0;
-
-            while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
-                trim_whitespace(col_token);  // Remove any extra spaces around the column name
-                strcpy(statement->selected_columns[col_index], col_token);
-                col_index++;
-                col_token = strtok(NULL, ",");
-            }
-
-            statement->num_selected_columns = col_index;
-            strcpy(statement->table_name, table_name);
-            return PREPARE_SUCCESS;
+    if (args == 2) {
+        // Remove any semicolon at the end of the table name
+        char* semicolon_pos = strchr(table_name, ';');
+        if (semicolon_pos != NULL) {
+            *semicolon_pos = '\0';
         }
+
+        // Split the columns by comma and store them in the Statement struct
+        char* col_token = strtok(columns, ",");
+        int col_index = 0;
+
+        while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
+            trim_whitespace(col_token);  // Remove any extra spaces around the column name
+            strcpy(statement->selected_columns[col_index], col_token);
+            col_index++;
+            col_token = strtok(NULL, ",");
+        }
+
+        statement->num_selected_columns = col_index;
+        strcpy(statement->table_name, table_name);
+        printf("Parsed table name: %s\n", statement->table_name);  // Debug output
+        for (int i = 0; i < col_index; i++) {
+            printf("Parsed column %d: %s\n", i, statement->selected_columns[i]);  // Debug output
+        }
+        return PREPARE_SUCCESS;
     }
+
+    printf("Error: Could not parse the SELECT statement.\n");
+    return PREPARE_UNRECOGNIZED_STATEMENT;
+}
+
     // Default case for unrecognized commands
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
