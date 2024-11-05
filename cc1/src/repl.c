@@ -1,5 +1,7 @@
 #include "repl.h"
+#include "delete.h"
 #include "insert.h"
+#include "btree.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +9,16 @@
 #include <unistd.h>  // pour ssize_t
 #include <stddef.h>
 
+// initilisation de la racine de l'abre
+BTreeNode* btree_root = NULL;
+
+void execute_show_tree() {
+    // Reconstruit le B-arbre à chaque appel
+    btree_root = NULL;  // Réinitialiser l'arbre avant de le remplir
+    build_btree_from_csv("database.csv");
+    printf("B-Tree Structure:\n");
+    traverse_btree(btree_root);
+}
 InputBuffer* new_input_buffer() {
     InputBuffer* input_buffer = (InputBuffer*)malloc(sizeof(InputBuffer));
     input_buffer->buffer = NULL;
@@ -52,11 +64,22 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         sscanf(input_buffer->buffer, "create %s", statement->table_name);
         return PREPARE_SUCCESS;
     }
+
+    if (strncmp(input_buffer->buffer, "exit", 4) == 0) {
+        statement->type = STATEMENT_EXIT;
+        return PREPARE_SUCCESS;
+    }
     if (strncmp(input_buffer->buffer, "describe", 8) == 0) {
         statement->type = STATEMENT_DESCRIBE;
         sscanf(input_buffer->buffer, "describe %s", statement->table_name);
         return PREPARE_SUCCESS;
     }
+
+    if (strncmp(input_buffer->buffer, "show tree", 9) == 0) {
+        statement->type = STATEMENT_SHOW_TREE;
+        return PREPARE_SUCCESS;
+    }
+
     if (strncmp(input_buffer->buffer, "insert", 6) == 0) {
         struct ColumnValueNode* head = NULL;
         statement->type = STATEMENT_INSERT;
@@ -182,62 +205,62 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         }
     }
 
-/* ########################################## */
-/*!! Commande SELECT !!*/
+    /* ########################################## */
+    /*!! Commande SELECT !!*/
 
-/* SELECT * : OK
- * SELECT column_name : OK
- * SELECT multiple columns : OK
- */
+    /* SELECT * : OK
+    * SELECT column_name : OK
+    * SELECT multiple columns : OK
+    */
 
-    if (strncmp(input_buffer->buffer, "select", 6) == 0) {
-    statement->type = STATEMENT_SELECT;
+        if (strncmp(input_buffer->buffer, "select", 6) == 0) {
+        statement->type = STATEMENT_SELECT;
 
-    // Extract columns and table name
-    char columns[255];
-    char table_name[255];
-    int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
+        // Extract columns and table name
+        char columns[255];
+        char table_name[255];
+        int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
 
-    if (args == 2) {
-        // Remove any semicolon at the end of the table name
-        char* semicolon_pos = strchr(table_name, ';');
-        if (semicolon_pos != NULL) {
-            *semicolon_pos = '\0';
+        if (args == 2) {
+            // Remove any semicolon at the end of the table name
+            char* semicolon_pos = strchr(table_name, ';');
+            if (semicolon_pos != NULL) {
+                *semicolon_pos = '\0';
+            }
+
+            // Split the columns by comma and store them in the Statement struct
+            char* col_token = strtok(columns, ",");
+            int col_index = 0;
+
+            while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
+                trim_whitespace(col_token);  // Remove any extra spaces around the column name
+                strcpy(statement->selected_columns[col_index], col_token);
+                col_index++;
+                col_token = strtok(NULL, ",");
+            }
+
+            statement->num_selected_columns = col_index;
+            strcpy(statement->table_name, table_name);
+            printf("Parsed table name: %s\n", statement->table_name);  // Debug output
+            for (int i = 0; i < col_index; i++) {
+                printf("Parsed column %d: %s\n", i, statement->selected_columns[i]);  // Debug output
+            }
+            return PREPARE_SUCCESS;
         }
 
-        // Split the columns by comma and store them in the Statement struct
-        char* col_token = strtok(columns, ",");
-        int col_index = 0;
-
-        while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
-            trim_whitespace(col_token);  // Remove any extra spaces around the column name
-            strcpy(statement->selected_columns[col_index], col_token);
-            col_index++;
-            col_token = strtok(NULL, ",");
-        }
-
-        statement->num_selected_columns = col_index;
-        strcpy(statement->table_name, table_name);
-        printf("Parsed table name: %s\n", statement->table_name);  // Debug output
-        for (int i = 0; i < col_index; i++) {
-            printf("Parsed column %d: %s\n", i, statement->selected_columns[i]);  // Debug output
-        }
+        printf("Error: Could not parse the SELECT statement.\n");
+        return PREPARE_UNRECOGNIZED_STATEMENT;
+    }
+        if (strncmp(input_buffer->buffer, "delete", 6) == 0) {
+        statement->type = STATEMENT_DELETETABLE;
+        sscanf(input_buffer->buffer, "delete table %s", statement->table_name);
         return PREPARE_SUCCESS;
     }
 
-    printf("Error: Could not parse the SELECT statement.\n");
-    return PREPARE_UNRECOGNIZED_STATEMENT;
-}
-    if (strncmp(input_buffer->buffer, "delete", 6) == 0) {
-    statement->type = STATEMENT_DELETETABLE;
-    sscanf(input_buffer->buffer, "delete table %s", statement->table_name);
-    return PREPARE_SUCCESS;
-}
 
-
-    // Default case for unrecognized commands
-    return PREPARE_UNRECOGNIZED_STATEMENT;
-}
+        // Default case for unrecognized commands
+        return PREPARE_UNRECOGNIZED_STATEMENT;
+    }
 
 
 /* ########################################## */
@@ -258,6 +281,9 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
     case (STATEMENT_SELECT):
             execute_select(statement, filename);
             //printf("select command detected");
+            break;
+    case (STATEMENT_SHOW_TREE):
+            execute_show_tree();
             break;
     case (STATEMENT_INSERT):
             execute_insert(statement, filename);
