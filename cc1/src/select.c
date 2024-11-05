@@ -24,15 +24,24 @@ void execute_select(Statement* statement, const char* filename) {
 
     // Find the table in the CSV file
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "#### Table:", 11) == 0) {
-            char table_name[255];
-            sscanf(line, "#### Table: %s", table_name);
-            if (strcmp(table_name, statement->table_name) == 0) {
-                table_found = 1;
-                break;
-            }
+    if (strncmp(line, "#### Table::", 12) == 0) {
+        int table_id;
+        char table_name[255];
+        
+        // Modifier le sscanf pour extraire l'ID de la table et le nom
+        sscanf(line, "#### Table::%d: %s", &table_id, table_name);
+
+        // Affichage pour le débogage
+        printf("Table ID: %d, Table Name: %s\n", table_id, table_name);
+
+        // Comparer le nom de la table avec celui de la commande
+        if (strcmp(table_name, statement->table_name) == 0) {
+            table_found = 1;
+            break;
         }
     }
+}
+
 
     if (!table_found) {
         printf("Erreur : Table '%s' non trouvée.\n", statement->table_name);
