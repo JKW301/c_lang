@@ -75,6 +75,14 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         return PREPARE_SUCCESS;
     }
 
+    if (strncmp(input_buffer->buffer, "search", 6) == 0) {
+        statement->type = STATEMENT_SEARCH;
+        sscanf(input_buffer->buffer, "search %d", &statement->search_key);
+        printf("Recherche de la clé : %d\n", statement->search_key);  // Debug
+        return PREPARE_SUCCESS;
+    }
+
+
     if (strncmp(input_buffer->buffer, "show tree", 9) == 0) {
         statement->type = STATEMENT_SHOW_TREE;
         return PREPARE_SUCCESS;
@@ -284,6 +292,16 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
             break;
     case (STATEMENT_SHOW_TREE):
             execute_show_tree();
+            break;
+    case STATEMENT_SEARCH:
+            if (btree_root == NULL) {
+                printf("Initialisation du B-arbre à partir de 'database.csv'...\n");
+                build_btree_from_csv("database.csv"); // Initialise l'arbre avant la recherche
+            }
+            BTreeNode* result = search_btree(btree_root, statement->search_key);
+            if (result == NULL) {
+                printf("Table with ID %d not found.\n", statement->search_key);
+            }
             break;
     case (STATEMENT_INSERT):
             execute_insert(statement, filename);

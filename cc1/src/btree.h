@@ -23,8 +23,9 @@ void split_btree_node(BTreeNode** root, BTreeNode* node);
 void insert_into_parent(BTreeNode* parent, int key, const char* table_name, BTreeNode* new_child);
 
 void traverse_btree(BTreeNode* root);
-void print_btree_level(BTreeNode* root, int depth, int is_last);
+void print_btree_level(BTreeNode* root, int depth);
 void build_btree_from_csv(const char* filename);
 BTreeNode* search_btree(BTreeNode* root, int key);
+
 
 #endif // BTREE_H

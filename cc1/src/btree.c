@@ -153,11 +153,13 @@ void build_btree_from_csv(const char* filename) {
     fclose(file);
 }
 
-void print_btree_level(BTreeNode* root, int depth, int is_last) {
+void print_btree_level(BTreeNode* root, int depth) {
     if (root != NULL) {
+        // Affiche les clés du nœud actuel avec indentation
         for (int i = 0; i < depth; i++) {
-            printf(is_last ? "    " : "|   ");
+            printf("|   ");
         }
+
         printf("|-- [");
         for (int i = 0; i < root->num_keys; i++) {
             printf("%d (%s)", root->keys[i], root->table_names[i]);
@@ -167,15 +169,47 @@ void print_btree_level(BTreeNode* root, int depth, int is_last) {
         }
         printf("]\n");
 
+        // Affiche les enfants du nœud avec une indentation supplémentaire
         for (int i = 0; i <= root->num_keys; i++) {
             if (root->children[i] != NULL) {
-                print_btree_level(root->children[i], depth + 1, i == root->num_keys);
+                print_btree_level(root->children[i], depth + 1);
             }
         }
     }
 }
 
-
 void traverse_btree(BTreeNode* root) {
-    print_btree_level(root, 0, 1);
+    print_btree_level(root, 0);
 }
+
+BTreeNode* search_btree(BTreeNode* root, int key) {
+    if (root == NULL) {
+        printf("Erreur : B-tree root is NULL.\n");
+        return NULL;
+    }
+
+    int i = 0;
+    while (i < root->num_keys && key > root->keys[i]) {
+        i++;
+    }
+
+    if (i < root->num_keys && key == root->keys[i]) {
+        printf("Table found: ID %d, Name %s\n", root->keys[i], root->table_names[i]);
+        return root;
+    }
+
+    if (root->is_leaf) {
+        printf("Key %d not found in leaf node.\n", key);
+        return NULL;
+    }
+
+    printf("Descending to child %d of node with keys: ", i);
+    for (int j = 0; j < root->num_keys; j++) {
+        printf("%d ", root->keys[j]);
+    }
+    printf("\n");
+
+    return search_btree(root->children[i], key);
+}
+
+

@@ -28,6 +28,7 @@ typedef enum {
     STATEMENT_DESCRIBE,
     //STATEMENT_USE,
     //STATEMENT_VIEWTABLES,
+    STATEMENT_SEARCH,
     STATEMENT_DELETETABLE,
     STATEMENT_SELECT,
     STATEMENT_SHOW_TREE,
@@ -53,6 +54,7 @@ typedef struct {
     char selected_columns[MAX_SELECTED_COLUMNS][255];  // Array to store selected column names
     int num_selected_columns;  // Track the number of selected columns
     //char formatted_values[MAX_VALUE_LEN];
+    int search_key;
 } Statement;
 
 
