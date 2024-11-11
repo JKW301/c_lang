@@ -5,6 +5,18 @@
 #include <unistd.h>  // pour ssize_t
 #include <stddef.h>
 
+void print_boxed_line(const char* line) {
+    printf("| %s |\n", line);
+}
+
+void print_boxed_header_footer(int length) {
+    printf("+");
+    for (int i = 0; i < length + 2; i++) {
+        printf("-");
+    }
+    printf("+\n");
+}
+
 void execute_select(Statement* statement, const char* filename) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -24,24 +36,23 @@ void execute_select(Statement* statement, const char* filename) {
 
     // Find the table in the CSV file
     while (fgets(line, sizeof(line), file)) {
-    if (strncmp(line, "#### Table::", 12) == 0) {
-        int table_id;
-        char table_name[255];
-        
-        // Modifier le sscanf pour extraire l'ID de la table et le nom
-        sscanf(line, "#### Table::%d: %s", &table_id, table_name);
+        if (strncmp(line, "#### Table::", 12) == 0) {
+            int table_id;
+            char table_name[255];
+            
+            // Modifier le sscanf pour extraire l'ID de la table et le nom
+            sscanf(line, "#### Table::%d: %s", &table_id, table_name);
 
-        // Affichage pour le débogage
-        printf("Table ID: %d, Table Name: %s\n", table_id, table_name);
+            // Affichage pour le débogage
+            printf("Table ID: %d, Table Name: %s\n", table_id, table_name);
 
-        // Comparer le nom de la table avec celui de la commande
-        if (strcmp(table_name, statement->table_name) == 0) {
-            table_found = 1;
-            break;
+            // Comparer le nom de la table avec celui de la commande
+            if (strcmp(table_name, statement->table_name) == 0) {
+                table_found = 1;
+                break;
+            }
         }
     }
-}
-
 
     if (!table_found) {
         printf("Erreur : Table '%s' non trouvée.\n", statement->table_name);
@@ -83,6 +94,20 @@ void execute_select(Statement* statement, const char* filename) {
                 return;
             }
         }
+
+        // Print header
+        char header_line[MAX_LINE_LENGTH] = "";
+        for (int i = 0; i < statement->num_selected_columns; i++) {
+            if (is_wildcard || column_indices[i] != -1) {
+                if (strlen(header_line) > 0) {
+                    strcat(header_line, ", ");
+                }
+                strcat(header_line, columns[column_indices[i]]);
+            }
+        }
+        print_boxed_header_footer(strlen(header_line));
+        print_boxed_line(header_line);
+        print_boxed_header_footer(strlen(header_line));
     }
 
     // Read and print rows from the table
@@ -94,6 +119,7 @@ void execute_select(Statement* statement, const char* filename) {
         char* token = strtok(line, ",");
         int index = 0;
         int print_needed = 0;
+        char row_line[MAX_LINE_LENGTH] = "";
 
         while (token != NULL) {
             trim_whitespace(token);
@@ -101,10 +127,10 @@ void execute_select(Statement* statement, const char* filename) {
             // Print selected columns or all columns if wildcard
             for (int i = 0; i < statement->num_selected_columns; i++) {
                 if (is_wildcard || index == column_indices[i]) {
-                    if (print_needed > 0) {
-                        printf(", ");
+                    if (strlen(row_line) > 0) {
+                        strcat(row_line, ", ");
                     }
-                    printf("%s", token);
+                    strcat(row_line, token);
                     print_needed = 1;
                 }
             }
@@ -114,9 +140,10 @@ void execute_select(Statement* statement, const char* filename) {
         }
 
         if (print_needed) {
-            printf("\n");
+            print_boxed_line(row_line);
         }
     }
 
+    print_boxed_header_footer(strlen(line));
     fclose(file);
 }
