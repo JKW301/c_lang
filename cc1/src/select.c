@@ -39,7 +39,7 @@ void execute_select(Statement* statement, const char* filename) {
         if (strncmp(line, "#### Table::", 12) == 0) {
             int table_id;
             char table_name[255];
-            
+
             // Modifier le sscanf pour extraire l'ID de la table et le nom
             sscanf(line, "#### Table::%d: %s", &table_id, table_name);
 
