@@ -1,44 +1,61 @@
-#include "repl.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>  // pour ssize_t
-#include <stddef.h>
+#include "btree.h"
 
-// Fonction pour créer une table dans le fichier CSV
-void create_table(const char* filename, const char* table_name, const char** columns, int num_columns) {
-    // Vérification si la table existe déjà
-    if (table_exists_in_file(filename, table_name)) {
-        printf("Erreur : La table '%s' existe déjà dans le fichier %s.\n", table_name, filename);
-        return;
-    }
 
-    // Ouverture du fichier en mode append
-    FILE *file = fopen(filename, "a");
+#include "create.h"
+
+// Assuming Column is defined in "btree.h" or another header file
+#include "btree.h"
+
+// Déclaration de la racine du B-arbre
+extern BTreeNode* btree_root;
+
+// Fonction pour générer un ID unique pour la table (peut être améliorée si nécessaire)
+int generate_table_id(const char* filename) {
+    FILE* file = fopen(filename, "r");
     if (file == NULL) {
-        printf("Erreur : Impossible d'ouvrir le fichier %s.\n", filename);
-        return;
+        return 1;  // Commence les IDs à 1 si le fichier n'existe pas
     }
 
-    // Écriture de la nouvelle table
-    fprintf(file, "#### Table: %s\n", table_name);
-    for (int i = 0; i < num_columns; i++) {
-        fprintf(file, "%s", columns[i]);
-        if (i < num_columns - 1) {
+    int max_id = 0;
+    char line[MAX_LINE_LENGTH];
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, "#### Table::", 12) == 0) {
+            int table_id;
+            sscanf(line, "#### Table::%d:", &table_id);
+            if (table_id > max_id) {
+                max_id = table_id;
+            }
+        }
+    }
+    fclose(file);
+    return max_id + 1;  // ID unique suivant
+}
+
+int create_table(const char* table_name, ColumnNode* columns_head, int column_count) {
+    (void) column_count;
+    FILE* file = fopen("database.csv", "a");
+    if (file == NULL) {
+        perror("Erreur lors de l'ouverture du fichier database.csv");
+        return -1;
+    }
+
+    int table_id = generate_table_id("database.csv");
+    fprintf(file, "#### Table::%d: %s\n", table_id, table_name);
+
+    ColumnNode* current = columns_head;
+    while (current != NULL) {
+        fprintf(file, "%s::%s", current->name, current->type == TYPE_INT ? "INT" : "STRING");
+        if (current->next != NULL) {
             fprintf(file, ",");
         }
+        current = current->next;
     }
     fprintf(file, "\n\n");
 
     fclose(file);
-    printf("Table '%s' créée avec succès dans le fichier %s.\n", table_name, filename);
-}
-
-// Exemple d'utilisation dans le main ou la boucle REPL
-void execute_createtable(Statement* statement, const char* filename) {
-    // Exemple de colonnes pour la nouvelle table
-    const char* columns[] = {"id::INT", "nom::string", "email::string"};
-    int num_columns = 3;
-
-    create_table(filename, statement->table_name, columns, num_columns);
+    printf("Table créée : %s avec ID %d\n", table_name, table_id);
+    return 0;
 }

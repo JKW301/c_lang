@@ -12,6 +12,9 @@
 #define MAX_SELECTED_COLUMNS 255
 #define DELIMITER "#### Table:"
 
+#define TYPE_INT 0
+#define TYPE_STRING 1
+
 typedef enum {
     META_COMMAND_SUCCESS,
     META_COMMAND_UNRECOGNIZED_COMMAND
@@ -35,15 +38,17 @@ typedef enum {
     STATEMENT_EXIT,
 } StatementType;
 
-/*
 typedef struct {
-    StatementType type;
-    char table_name[255];  // Nom de la table
-    char columns[MAX_COLUMNS][MAX_VALUE_LEN];  // Colonnes spécifiées pour l'insertion
-    char values[MAX_COLUMNS][MAX_VALUE_LEN];   // Valeurs pour chaque colonne dans une ligne
-    int num_columns;   // ajouté pour insert, erroné ? 
-} Statement;
-*/
+    char name[50];
+    int type;
+} Column;
+
+typedef struct ColumnNode {
+    char name[50];
+    int type;
+    struct ColumnNode* next;
+} ColumnNode;
+
 typedef struct {
     StatementType type;
     char table_name[255];
@@ -55,6 +60,10 @@ typedef struct {
     int num_selected_columns;  // Track the number of selected columns
     //char formatted_values[MAX_VALUE_LEN];
     int search_key;
+    int num_columns;
+    //ColumnNode* columns;   // Liste chaînée des colonnes
+    int column_count;
+    ColumnNode* columns_head;
 } Statement;
 
 
@@ -95,7 +104,8 @@ news
 
 // crea
 void execute_createtable(Statement* statement, const char* filename);
-void create_table(const char* filename, const char* table_name, const char** columns, int num_columns);
+//void create_table(const char* filename, const char* table_name, const char** columns, int num_columns);
+int create_table(const char* table_name, ColumnNode* columns_head, int column_count);
 int table_exists_in_file(const char* filename, const char* table_name);
 
 // desc

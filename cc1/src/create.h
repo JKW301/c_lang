@@ -1,10 +1,10 @@
 #ifndef CREATE_H
 #define CREATE_H
 
-#include repl.h
+#include "btree.h"
+#include "repl.h"
 
-void create_table(const char* filename, const char* table_name, const char** columns, int num_columns);
-void execute_createtable(Statement* statement, const char* filename);
-
+// Fonction pour créer une table
+int create_table(const char* table_name, ColumnNode* columns_head, int column_count);
 
 #endif

@@ -61,8 +61,43 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
     if (strncmp(input_buffer->buffer, "create", 6) == 0) {
         statement->type = STATEMENT_CREATETABLE;
-        sscanf(input_buffer->buffer, "create %s", statement->table_name);
-        return PREPARE_SUCCESS;
+         char columns_definition[256];
+        if (sscanf(input_buffer->buffer, "create %s (%[^)])", statement->table_name, columns_definition) == 2) {
+            char* token = strtok(columns_definition, ",");
+            ColumnNode* last_node = NULL;
+
+            while (token != NULL) {
+                ColumnNode* new_node = malloc(sizeof(ColumnNode));
+                if (!new_node) return PREPARE_UNRECOGNIZED_STATEMENT;  // Vérifier l'allocation mémoire
+
+                char col_type_str[10];
+                if (sscanf(token, "%[^:]::%s", new_node->name, col_type_str) == 2) {
+                    // Définir le type de colonne
+                    if (strcmp(col_type_str, "INT") == 0) {
+                        new_node->type = TYPE_INT;
+                    } else if (strcmp(col_type_str, "string") == 0) {
+                        new_node->type = TYPE_STRING;
+                    } else {
+                        free(new_node);
+                        return PREPARE_UNRECOGNIZED_STATEMENT;
+                    }
+                    new_node->next = NULL;
+
+                    // Insérer le nœud dans la liste chaînée
+                    if (last_node == NULL) {
+                        statement->columns_head = new_node;
+                    } else {
+                        last_node->next = new_node;
+                    }
+                    last_node = new_node;
+                } else {
+                    free(new_node);
+                    return PREPARE_UNRECOGNIZED_STATEMENT;
+                }
+                token = strtok(NULL, ",");
+            }
+            return PREPARE_SUCCESS;
+        }
     }
 
     if (strncmp(input_buffer->buffer, "exit", 4) == 0) {
@@ -159,9 +194,10 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         char line[MAX_LINE_LENGTH];
         int table_found = 0;
         while (fgets(line, sizeof(line), file)) {
-            if (strncmp(line, "#### Table:", 11) == 0) {
+            int tableid;
+            if (strncmp(line, "#### Table::", 11) == 0) {
                 char table_name[255];
-                sscanf(line, "#### Table: %s", table_name);
+                sscanf(line, "#### Table::%d: %s", &tableid, table_name);
                 if (strcmp(table_name, statement->table_name) == 0) {
                     table_found = 1;
 
@@ -281,7 +317,11 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
       exit(EXIT_SUCCESS);
         break;
     case (STATEMENT_CREATETABLE):
-            execute_createtable(statement, filename);
+            if (create_table(statement->table_name, statement->columns_head, statement->column_count) == 0) {
+                printf("Table '%s' créée avec succès.\n", statement->table_name);
+            } else {
+                printf("Erreur lors de la création de la table '%s'.\n", statement->table_name);
+            }
             break;
     case (STATEMENT_DESCRIBE):
             execute_describe(statement, filename);
@@ -311,6 +351,13 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
             break;
 
   }
+}
+void free_columns_list(ColumnNode* head) {
+    while (head != NULL) {
+        ColumnNode* temp = head;
+        head = head->next;
+        free(temp);
+    }
 }
 
 

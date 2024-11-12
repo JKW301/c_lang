@@ -18,9 +18,10 @@ void execute_insert(Statement* statement, const char* filename) {
 
     // Find the correct table in the CSV file
     while (fgets(line, sizeof(line), file)) {
+        int tableid;
         if (strncmp(line, "#### Table:", 11) == 0) {
             char table_name[255];
-            sscanf(line, "#### Table: %s", table_name);
+            sscanf(line, "#### Table::%d: %s", &tableid, table_name);
             if (strcmp(table_name, statement->table_name) == 0) {
                 table_found = 1;
 
@@ -33,7 +34,7 @@ void execute_insert(Statement* statement, const char* filename) {
     }
 
     if (!table_found) {
-        printf("Erreur : Table '%s' non trouvée.\n", statement->table_name);
+        printf("Erreurrrr : Table '%s' non trouvée.\n", statement->table_name);
         fclose(file);
         return;
     }
