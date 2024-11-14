@@ -102,7 +102,7 @@ void print_table_list(TableList* list);
 /*
 news
 */
-
+void repl();
 // crea
 void execute_createtable(Statement* statement, const char* filename);
 //void create_table(const char* filename, const char* table_name, const char** columns, int num_columns);
