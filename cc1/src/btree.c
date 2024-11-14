@@ -20,16 +20,15 @@ BTreeNode* create_btree_node(int is_leaf) {
 /* Code INSERT TREE */
 void insert_btree(BTreeNode** root, int key, const char* table_name) {
     if (*root == NULL) {
-        *root = create_btree_node(1);
+        *root = create_btree_node(1);  // Crée un nœud feuille
         (*root)->keys[0] = key;
         strcpy((*root)->table_names[0], table_name);
         (*root)->num_keys = 1;
     } else {
         BTreeNode* current = *root;
 
-        // Si le nœud actuel est une feuille, insérer directement
         if (current->is_leaf) {
-            // Trouver la position pour insérer la nouvelle clé
+            // Trouver la position d'insertion
             int i = current->num_keys - 1;
             while (i >= 0 && current->keys[i] > key) {
                 current->keys[i + 1] = current->keys[i];
@@ -37,14 +36,12 @@ void insert_btree(BTreeNode** root, int key, const char* table_name) {
                 i--;
             }
 
-            // Insérer la nouvelle clé
+            // Insérer la clé
             current->keys[i + 1] = key;
             strcpy(current->table_names[i + 1], table_name);
             current->num_keys++;
 
-            printf("Inserted Table ID: %d, Name: %s at leaf\n", key, table_name);
-
-            // Si le nœud est plein, gérer la division
+            // Diviser le nœud si nécessaire
             if (current->num_keys == MAX_KEYS) {
                 split_btree_node(root, current);
             }
@@ -56,7 +53,7 @@ void insert_btree(BTreeNode** root, int key, const char* table_name) {
             }
             i++;
 
-            // Vérifier si l'enfant est plein
+            // Diviser l'enfant si nécessaire
             if (current->children[i]->num_keys == MAX_KEYS) {
                 split_btree_node(root, current->children[i]);
                 if (key > current->keys[i]) {
@@ -64,11 +61,13 @@ void insert_btree(BTreeNode** root, int key, const char* table_name) {
                 }
             }
 
-            // Insérer dans l'enfant trouvé
+            // Insérer dans l'enfant approprié
             insert_btree(&current->children[i], key, table_name);
         }
     }
 }
+
+
 
 // Fonction pour diviser un nœud plein
 void split_btree_node(BTreeNode** root, BTreeNode* node) {
@@ -80,11 +79,13 @@ void split_btree_node(BTreeNode** root, BTreeNode* node) {
     BTreeNode* new_node = create_btree_node(node->is_leaf);
     new_node->num_keys = MAX_KEYS - mid_index - 1;
 
-    // Transférer les clés et les enfants après le milieu au nouveau nœud
+    // Transférer les clés après la médiane
     for (int j = 0; j < new_node->num_keys; j++) {
         new_node->keys[j] = node->keys[mid_index + 1 + j];
         strcpy(new_node->table_names[j], node->table_names[mid_index + 1 + j]);
     }
+
+    // Transférer les enfants si ce n'est pas une feuille
     if (!node->is_leaf) {
         for (int j = 0; j <= new_node->num_keys; j++) {
             new_node->children[j] = node->children[mid_index + 1 + j];
@@ -93,7 +94,7 @@ void split_btree_node(BTreeNode** root, BTreeNode* node) {
 
     node->num_keys = mid_index;
 
-    // Si le nœud à diviser est la racine, créer une nouvelle racine
+    // Si le nœud divisé est la racine
     if (*root == node) {
         BTreeNode* new_root = create_btree_node(0);
         new_root->keys[0] = mid_key;
@@ -103,12 +104,10 @@ void split_btree_node(BTreeNode** root, BTreeNode* node) {
         new_root->num_keys = 1;
         *root = new_root;
     } else {
-        // Propager la clé médiane au parent
         insert_into_parent(*root, mid_key, mid_table_name, new_node);
     }
 }
 
-// Fonction pour insérer la clé médiane dans le parent
 void insert_into_parent(BTreeNode* parent, int key, const char* table_name, BTreeNode* new_child) {
     int i = parent->num_keys - 1;
     while (i >= 0 && parent->keys[i] > key) {
@@ -123,7 +122,7 @@ void insert_into_parent(BTreeNode* parent, int key, const char* table_name, BTre
     parent->children[i + 2] = new_child;
     parent->num_keys++;
 
-    // Si le parent est plein, le diviser également
+    // Diviser le parent si nécessaire
     if (parent->num_keys == MAX_KEYS) {
         split_btree_node(&parent, parent);
     }
@@ -133,18 +132,17 @@ void insert_into_parent(BTreeNode* parent, int key, const char* table_name, BTre
 
 void build_btree_from_csv(const char* filename) {
     FILE* file = fopen(filename, "r");
-    if (file == NULL) {
+    if (!file) {
         printf("Erreur : Impossible d'ouvrir le fichier %s.\n", filename);
         return;
     }
 
     char line[MAX_LINE_LENGTH];
-    int table_id;
-    char table_name[255];
-
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "#### Table::", 12) == 0) {
-            sscanf(line, "#### Table::%d: %s", &table_id, table_name);
+        int table_id;
+        char table_name[255];
+
+        if (sscanf(line, "#### Table::%d: %s", &table_id, table_name) == 2) {
             insert_btree(&btree_root, table_id, table_name);
             printf("Inserting Table ID: %d, Name: %s\n", table_id, table_name);  // Debug
         }
@@ -153,9 +151,9 @@ void build_btree_from_csv(const char* filename) {
     fclose(file);
 }
 
+
 void print_btree_level(BTreeNode* root, int depth) {
     if (root != NULL) {
-        // Affiche les clés du nœud actuel avec indentation
         for (int i = 0; i < depth; i++) {
             printf("|   ");
         }
@@ -169,7 +167,6 @@ void print_btree_level(BTreeNode* root, int depth) {
         }
         printf("]\n");
 
-        // Affiche les enfants du nœud avec une indentation supplémentaire
         for (int i = 0; i <= root->num_keys; i++) {
             if (root->children[i] != NULL) {
                 print_btree_level(root->children[i], depth + 1);
@@ -177,6 +174,7 @@ void print_btree_level(BTreeNode* root, int depth) {
         }
     }
 }
+
 
 void traverse_btree(BTreeNode* root) {
     print_btree_level(root, 0);

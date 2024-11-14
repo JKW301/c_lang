@@ -29,8 +29,6 @@ typedef enum {
     STATEMENT_INSERT,
     STATEMENT_CREATETABLE,
     STATEMENT_DESCRIBE,
-    //STATEMENT_USE,
-    //STATEMENT_VIEWTABLES,
     STATEMENT_SHOWTABLES,
     STATEMENT_SEARCH,
     STATEMENT_DELETETABLE,
@@ -59,10 +57,8 @@ typedef struct {
     char formatted_values[MAX_LINE_LENGTH];    // String of ordered values to be inserted
     char selected_columns[MAX_SELECTED_COLUMNS][255];  // Array to store selected column names
     int num_selected_columns;  // Track the number of selected columns
-    //char formatted_values[MAX_VALUE_LEN];
     int search_key;
     int num_columns;
-    //ColumnNode* columns;   // Liste chaînée des colonnes
     int column_count;
     ColumnNode* columns_head;
 } Statement;
@@ -99,13 +95,10 @@ struct ColumnValueNode {
 // Fonctions de gestion des tables
 TableList* create_table_list();
 void print_table_list(TableList* list);
-/*
-news
-*/
+
 void repl();
 // crea
 void execute_createtable(Statement* statement, const char* filename);
-//void create_table(const char* filename, const char* table_name, const char** columns, int num_columns);
 int create_table(const char* table_name, ColumnNode* columns_head, int column_count);
 int table_exists_in_file(const char* filename, const char* table_name);
 
@@ -121,8 +114,7 @@ void execute_insert(Statement* statement, const char* filename);
 
 //
 void trim_whitespace(char* str);
- void add_column_value_node(struct ColumnValueNode** head, const char* column_name, const char* value);
-//void add_column_value_node(struct ColumnValueNode** head, char* column_name, char* value);
+void add_column_value_node(struct ColumnValueNode** head, const char* column_name, const char* value);
 struct ColumnValueNode* find_column_value_node(struct ColumnValueNode* head, char* column_name);
 void trim_type(char* column_name);
 

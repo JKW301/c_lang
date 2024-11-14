@@ -105,10 +105,11 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         return PREPARE_SUCCESS;
     }
 
-    if (strncmp(input_buffer->buffer, "exit", 4) == 0) {
+    if (strncmp(input_buffer->buffer, "exit", 4) == 0 || strncmp(input_buffer->buffer, "ex", 2) == 0) {
         statement->type = STATEMENT_EXIT;
         return PREPARE_SUCCESS;
     }
+
     if (strncmp(input_buffer->buffer, "describe", 8) == 0) {
         statement->type = STATEMENT_DESCRIBE;
         sscanf(input_buffer->buffer, "describe %s", statement->table_name);
@@ -319,7 +320,7 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
   switch (statement->type) {
     case (STATEMENT_EXIT):
         close_input_buffer(input_buffer);
-      exit(EXIT_SUCCESS);
+        exit(EXIT_SUCCESS);
         break;
     case (STATEMENT_CREATETABLE):
             if (create_table(statement->table_name, statement->columns_head, statement->column_count) == 0) {
@@ -524,35 +525,3 @@ void repl() {
         printf("Executed.\n");
     }
 }
-
-/*
-
-void print_table_list(TableList* list) {
-    Table* current = list->head;
-    while (current != NULL) {
-        print_table_in_frame(current->table_name);  // Encadrer chaque nom de table
-        current = current->next;
-    }
-}
-
-void print_table_in_frame(const char* table_name) {
-    int length = strlen(table_name);
-    
-    // Affichage de la ligne supérieure
-    printf("+");
-    for (int i = 0; i < length + 2; i++) {
-        printf("-");
-    }
-    printf("+\n");
-
-    // Affichage du contenu (nom de la table)
-    printf("| %s |\n", table_name);
-
-    // Affichage de la ligne inférieure
-    printf("+");
-    for (int i = 0; i < length + 2; i++) {
-        printf("-");
-    }
-    printf("+\n");
-}
-*/
