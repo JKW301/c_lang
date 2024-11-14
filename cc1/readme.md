@@ -505,7 +505,7 @@ typedef struct ColumnValueNode {
     char column_name[50];  // Nom de la colonne
     char value[MAX_VALUE_LEN];  // Valeur associée
     struct ColumnValueNode* next;  // Pointeur vers le nœud suivant
-} ColumnValueNode;
+} ColumnValueNode; 
 ```
 
 **Rôle :**
