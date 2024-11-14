@@ -21,7 +21,8 @@ void describe_table(const char* filename, const char* table_name) {
         if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0) {
             // Vérifier si c'est la table recherchée
             char existing_table_name[255];
-            sscanf(line, "#### Table: %254[^\n]", existing_table_name);
+            int tableid;
+            sscanf(line, "#### Table::%d: %254[^\n]", &tableid, existing_table_name);
             if (strcmp(existing_table_name, table_name) == 0) {
                 table_found = 1;
                 // Lire la ligne suivante contenant les colonnes

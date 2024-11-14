@@ -100,6 +100,11 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         }
     }
 
+        if (strncmp(input_buffer->buffer, "show tables", 11) == 0) {
+        statement->type = STATEMENT_SHOWTABLES;
+        return PREPARE_SUCCESS;
+    }
+
     if (strncmp(input_buffer->buffer, "exit", 4) == 0) {
         statement->type = STATEMENT_EXIT;
         return PREPARE_SUCCESS;
@@ -349,6 +354,30 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
     case (STATEMENT_DELETETABLE):
             execute_delete_table(statement, filename);
             break;
+    case (STATEMENT_SHOWTABLES):
+            printf("Liste des tables disponibles :\n");
+
+            // Ouvrir le fichier contenant les tables (par exemple, database.csv)
+            FILE* file = fopen("database.csv", "r");
+            if (file == NULL) {
+                perror("Erreur lors de l'ouverture du fichier database.csv");
+                break;
+            }
+
+            char line[MAX_LINE_LENGTH];
+            while (fgets(line, sizeof(line), file)) {
+                if (strncmp(line, "#### Table::", 12) == 0) {
+                    // Extraire le nom de la table après le dernier ":"
+                    char* table_name = strrchr(line, ':') + 1; // Pointer après le dernier ":"
+                    if (table_name != NULL) {
+                        printf("- %s", table_name); // Afficher le nom de la table
+                    }
+                }
+            }
+
+            fclose(file);
+            break;
+
 
   }
 }
