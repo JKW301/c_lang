@@ -100,9 +100,14 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         }
     }
 
-        if (strncmp(input_buffer->buffer, "show tables", 11) == 0) {
-        statement->type = STATEMENT_SHOWTABLES;
+    if (strncmp(input_buffer->buffer, "man", 3) == 0 || strncmp(input_buffer->buffer, "help", 4) ==0) {
+        statement->type = STATEMENT_MAN;
         return PREPARE_SUCCESS;
+    }
+
+    if (strncmp(input_buffer->buffer, "show tables", 11) == 0) {
+    statement->type = STATEMENT_SHOWTABLES;
+    return PREPARE_SUCCESS;
     }
 
     if (strncmp(input_buffer->buffer, "exit", 4) == 0 || strncmp(input_buffer->buffer, "ex", 2) == 0) {
@@ -378,9 +383,51 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
 
             fclose(file);
             break;
+    case STATEMENT_MAN:
+            printf("\033[1mGuide des commandes disponibles :\033[0m\n");
+            printf("\033[36m1. CREATE TABLE\033[0m\n");
+            printf("   Syntaxe : create <table_name> (<column1>::<type>, <column2>::<type>, ...)\n");
+            printf("   Description : Crée une nouvelle table avec les colonnes spécifiées.\n");
+            printf("\n");
+            
+            printf("\033[36m2. INSERT\033[0m\n");
+            printf("   Syntaxe : insert into <table_name> (<column1>, <column2>, ...) values (<value1>, <value2>, ...)\n");
+            printf("   Description : Insère une ligne dans une table existante.\n");
+            printf("\n");
+            
+            printf("\033[36m3. SELECT\033[0m\n");
+            printf("   Syntaxe : select <columns> from <table_name>\n");
+            printf("   Description : Sélectionne des colonnes spécifiques dans une table.\n");
+            printf("\n");
+            
+            printf("\033[36m4. SHOW TABLES\033[0m\n");
+            printf("   Syntaxe : show tables\n");
+            printf("   Description : Affiche toutes les tables disponibles dans la base de données.\n");
+            printf("\n");
+            
+            printf("\033[36m5. DELETE TABLE\033[0m\n");
+            printf("   Syntaxe : delete <table_name>\n");
+            printf("   Description : Supprime une table existante.\n");
+            printf("\n");
 
+            printf("\033[36m6. SHOW TREE\033[0m\n");
+            printf("    Description : Affiche la structure de l'arbre B.\n");
 
-  }
+            printf("\033[36m7. SEARCH\033[0m\n");
+            printf("    Syntaxe : search <table ID>\n");
+            printf("    Description : A l'aide du bTree, recherche et retourne la table correspondant à l'ID demandée.\n");
+            
+            printf("\033[36m8. EXIT\033[0m\n");
+            printf("   Syntaxe : 'exit' ou 'ex'\n");
+            printf("   Description : Quitte le programme.\n");
+            printf("\n");
+            break;
+
+        default:
+            printf("\033[31mCommande non reconnue.\033[0m\n");
+            break;
+    
+    }
 }
 void free_columns_list(ColumnNode* head) {
     while (head != NULL) {
@@ -517,7 +564,8 @@ void repl() {
             case PREPARE_SUCCESS:
                 break;
             case PREPARE_UNRECOGNIZED_STATEMENT:
-                printf("Unrecognized keyword at start of '%s'.\n", input_buffer->buffer);
+                printf("\033[31mCommande non reconnue : '%s'.\033[0m\n", input_buffer->buffer);
+                printf("Tapez 'man' ou 'help' pour voir les commandes disponibles.\n");
                 continue;
         }
         const char* filename = "database.csv";  // Define the filename

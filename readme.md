@@ -1,7 +1,5 @@
 # Projet de C : CC_1
 
-Le projet est situé dans le dossier cc1/
-<br>Le dossier useless/ contient des fichiers inutile au bon fonctionnement du projet mentionné.<br>
 ## Pré-requis et compilation
 
 #### **Pré-requis**
@@ -416,6 +414,8 @@ Voici un tableau clair et structuré qui récapitule les **macros**, **typedefs*
 
 ## Description des Structs
 
+Voici une explication détaillée des structures utilisées dans le projet, avec une attention particulière aux macros et typedefs qui les accompagnent.
+
 ---
 
 #### **`InputBuffer`**
@@ -565,3 +565,5 @@ typedef struct {
   - Dépendent fortement de `Column`, `ColumnNode`, et `ColumnValueNode` pour organiser les colonnes et valeurs.
 
 ---
+
+Ce descriptif vous permet de comprendre l’objectif de chaque struct et leur utilisation dans le projet. Si vous souhaitez approfondir une partie spécifique, n’hésitez pas ! 😊
