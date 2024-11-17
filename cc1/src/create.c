@@ -5,8 +5,6 @@
 
 
 #include "create.h"
-
-// Assuming Column is defined in "btree.h" or another header file
 #include "btree.h"
 
 // Déclaration de la racine du B-arbre

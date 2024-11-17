@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#define MAX_COLUMNS 10  // Nombre maximum de colonnes dans une table
-#define MAX_ROWS 100    // Nombre maximum de lignes dans une table
-#define MAX_VALUE_LEN 255  // Longueur maximale d'une valeur
+#include "btree.h"
+#define MAX_COLUMNS 10 
+#define MAX_ROWS 100
+#define MAX_VALUE_LEN 255
 #define MAX_LINE_LENGTH 255
 #define MAX_SELECTED_COLUMNS 255
 #define DELIMITER "#### Table:"
@@ -121,4 +122,8 @@ void trim_type(char* column_name);
 
 //delete table
 
+void save_to_disk(const char* filename, const BTreeNode* root);
+void load_from_disk(const char* filename, BTreeNode** root);
+void serialize_btree(FILE* file, const BTreeNode* node);
+void deserialize_btree(FILE* file, BTreeNode** node);
 #endif

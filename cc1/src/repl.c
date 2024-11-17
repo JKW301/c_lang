@@ -60,24 +60,36 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
     if (strncmp(input_buffer->buffer, "create", 6) == 0) {
+        printf("Commande 'create' détectée.\n"); // Debug
         statement->type = STATEMENT_CREATETABLE;
-         char columns_definition[256];
+
+        char columns_definition[256];
         if (sscanf(input_buffer->buffer, "create %s (%[^)])", statement->table_name, columns_definition) == 2) {
+            printf("Nom de la table : %s\n", statement->table_name);  // Debug
+            printf("Définition des colonnes : %s\n", columns_definition);  // Debug
+
             char* token = strtok(columns_definition, ",");
             ColumnNode* last_node = NULL;
 
             while (token != NULL) {
                 ColumnNode* new_node = malloc(sizeof(ColumnNode));
-                if (!new_node) return PREPARE_UNRECOGNIZED_STATEMENT;  // Vérifier l'allocation mémoire
+                if (!new_node) {
+                    perror("Erreur d'allocation mémoire pour ColumnNode");
+                    return PREPARE_UNRECOGNIZED_STATEMENT;
+                }
 
                 char col_type_str[10];
-                if (sscanf(token, "%[^:]::%s", new_node->name, col_type_str) == 2) {
+                // Gérer les deux formats de colonnes (avec `::` ou `:`)
+                if (sscanf(token, "%[^:]::%s", new_node->name, col_type_str) == 2 ||
+                    sscanf(token, "%[^:]:%s", new_node->name, col_type_str) == 2) {
+                    
                     // Définir le type de colonne
                     if (strcmp(col_type_str, "INT") == 0) {
                         new_node->type = TYPE_INT;
-                    } else if (strcmp(col_type_str, "string") == 0) {
+                    } else if (strcmp(col_type_str, "STRING") == 0 || strcmp(col_type_str, "string") == 0) {
                         new_node->type = TYPE_STRING;
                     } else {
+                        printf("Type de colonne inconnu : %s\n", col_type_str);
                         free(new_node);
                         return PREPARE_UNRECOGNIZED_STATEMENT;
                     }
@@ -91,6 +103,7 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
                     }
                     last_node = new_node;
                 } else {
+                    printf("Erreur de parsing pour la colonne : %s\n", token);
                     free(new_node);
                     return PREPARE_UNRECOGNIZED_STATEMENT;
                 }
@@ -311,11 +324,9 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         sscanf(input_buffer->buffer, "delete table %s", statement->table_name);
         return PREPARE_SUCCESS;
     }
-
-
-        // Default case for unrecognized commands
-        return PREPARE_UNRECOGNIZED_STATEMENT;
-    }
+    // Default case for unrecognized commands
+    return PREPARE_UNRECOGNIZED_STATEMENT;
+}
 
 
 /* ########################################## */
@@ -324,12 +335,14 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
 void execute_statement(Statement* statement, InputBuffer* input_buffer, const char* filename) {
   switch (statement->type) {
     case (STATEMENT_EXIT):
+        save_to_disk(filename, btree_root);
         close_input_buffer(input_buffer);
         exit(EXIT_SUCCESS);
         break;
     case (STATEMENT_CREATETABLE):
             if (create_table(statement->table_name, statement->columns_head, statement->column_count) == 0) {
                 printf("Table '%s' créée avec succès.\n", statement->table_name);
+                //save_to_disk(filename, btree_root);
             } else {
                 printf("Erreur lors de la création de la table '%s'.\n", statement->table_name);
             }
@@ -356,9 +369,11 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
             break;
     case (STATEMENT_INSERT):
             execute_insert(statement, filename);
+            save_to_disk(filename, btree_root);
             break;
     case (STATEMENT_DELETETABLE):
             execute_delete_table(statement, filename);
+            save_to_disk(filename, btree_root);
             break;
     case (STATEMENT_SHOWTABLES):
             printf("Liste des tables disponibles :\n");

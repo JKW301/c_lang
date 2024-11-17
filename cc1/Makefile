@@ -5,7 +5,7 @@ SANITIZE_FLAGS = -fsanitize=address -fsanitize=undefined
 LDFLAGS = 
 
 # Define object files
-OBJ = src/repl.o src/insert.o src/main.o src/create.o src/describe.o src/select.o src/delete.o src/btree.o
+OBJ = src/repl.o src/insert.o src/main.o src/create.o src/describe.o src/select.o src/delete.o src/btree.o src/persistance.o
 
 # Define the final executable
 TARGET = ViewDB
