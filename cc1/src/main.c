@@ -6,21 +6,17 @@
 #include "repl.h"
 #include "btree.h"
 
+extern BTreeNode* btree_root;
 
 int main(int argc __attribute__((unused)), char* argv[] __attribute__((unused)), char* envp[] __attribute__((unused))) {
-  
-  /*
-   * Pour tester les sanitizers :
-   * décommentez la ligne ci-dessous 
-   */
+    // Charger les données depuis le disque dans l'arbre B
+    load_from_disk("database.csv", &btree_root);
 
-  //int array[5]; array[10] = 42;
-  //BTreeNode* btree_root = NULL;
+    // Lancer REPL
+    repl();
 
-    // Load the B-tree state from disk
-  //load_from_disk("database.csv", &btree_root);
+    // Sauvegarder les données à la fin
+    save_to_disk("database.csv", btree_root);
 
-  repl();
-  //save_to_disk("database.csv", btree_root);
-  return 0;
+    return 0;
 }

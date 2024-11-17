@@ -16,6 +16,11 @@
 #define TYPE_INT 0
 #define TYPE_STRING 1
 
+
+#define COLOR_RED "\033[31m"
+#define COLOR_GREEN "\033[32m"
+#define COLOR_RESET "\033[0m"
+
 typedef enum {
     META_COMMAND_SUCCESS,
     META_COMMAND_UNRECOGNIZED_COMMAND
@@ -122,8 +127,4 @@ void trim_type(char* column_name);
 
 //delete table
 
-void save_to_disk(const char* filename, const BTreeNode* root);
-void load_from_disk(const char* filename, BTreeNode** root);
-void serialize_btree(FILE* file, const BTreeNode* node);
-void deserialize_btree(FILE* file, BTreeNode** node);
 #endif

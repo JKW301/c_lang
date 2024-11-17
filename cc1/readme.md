@@ -11,6 +11,12 @@ Le projet est situé dans le dossier cc1/
   - Valgrind (analyseur de mémoire)
 
 ---
+### Shell
+
+Certains IDE ou shells minimalistes, comme le terminal intégré par défaut de Visual Studio Code (`bash 2.5`), peuvent ne pas lancer la commande `make` pour la compilation du programme.<br> 
+Par exemples, le terminal pourraient retourner des messages d'erreur ou des problèmes d'incompatibilités avec les outils système comme gcc, make, ou valgrind. Pour éviter ces problèmes, il est recommandé d'utiliser un terminal complet et bien configuré, comme celui de votre système d'exploitation (par exemple, bash, zsh, ou fish) ou un terminal externe comme Windows Terminal, iTerm2 (macOS), ou GNOME Terminal (Linux). Cela garantit un environnement plus robuste pour la compilation et l'exécution de projets complexes.
+
+---
 
 ### Vérifier les Bibliothèques
 
@@ -60,9 +66,8 @@ Le `Makefile` fourni contient plusieurs cibles pour compiler, exécuter et netto
    - Affiche un rapport détaillé des problèmes détectés.
 
 4. **`make clean`**
-   - Supprime les fichiers objets (`*.o`) et l’exécutable généré (`ViewDB`).
    - Il se peut que `make` échoue alors exécutez `make clean` au préalable
-   - Utile pour nettoyer le répertoire avant une recompilation.
+   - Supprime les fichiers objets (`*.o`) et l’exécutable généré (`ViewDB`).
 
 ---
 
@@ -169,28 +174,21 @@ Le projet est structuré comme suit :
 ├── src                # Dossier contenant les fichiers source et les fichiers objets
 │   ├── btree.c        # Implémentation des fonctions pour la gestion du B-Tree
 │   ├── btree.h        # En-tête pour le B-Tree
-│   ├── btree.o        # Fichier objet généré après compilation de btree.c
 │   ├── create.c       # Implémentation des fonctions pour la création de tables
 │   ├── create.h       # En-tête pour les fonctions de création de tables
-│   ├── create.o       # Fichier objet généré après compilation de create.c
 │   ├── delete.c       # Implémentation des fonctions pour supprimer des données
 │   ├── delete.h       # En-tête pour les fonctions de suppression
-│   ├── delete.o       # Fichier objet généré après compilation de delete.c
 │   ├── describe.c     # Implémentation des fonctions pour décrire les tables
 │   ├── describe.h     # En-tête pour les fonctions de description
-│   ├── describe.o     # Fichier objet généré après compilation de describe.c
 │   ├── insert.c       # Implémentation des fonctions pour insérer des données
 │   ├── insert.h       # En-tête pour les fonctions d'insertion
-│   ├── insert.o       # Fichier objet généré après compilation de insert.c
 │   ├── main           # Fichier exécutable temporaire (généré après compilation)
 │   ├── main.c         # Point d’entrée principal de l’application
-│   ├── main.o         # Fichier objet généré après compilation de main.c
 │   ├── repl.c         # Implémentation de la boucle interactive (REPL)
 │   ├── repl.h         # En-tête pour les fonctions de la boucle interactive
-│   ├── repl.o         # Fichier objet généré après compilation de repl.c
 │   ├── select.c       # Implémentation des fonctions pour sélectionner des données
 │   ├── select.h       # En-tête pour les fonctions de sélection
-│   └── select.o       # Fichier objet généré après compilation de select.c
+│   └── persistance.c  # Implémentation des fonctions sur la persistyance mémoire
 └── ViewDB             # Exécutable final produit après compilation
 ```
 
@@ -563,5 +561,100 @@ typedef struct {
   - (Optionnel) Utilise `KeyValuePair` pour manipuler des paires clé-valeur.
 - **Commandes CREATE, SELECT, INSERT** :
   - Dépendent fortement de `Column`, `ColumnNode`, et `ColumnValueNode` pour organiser les colonnes et valeurs.
+
+---
+
+##  **Persistance des Données**
+
+Le système de persistance garantit que les données manipulées en mémoire par le programme sont sauvegardées durablement sur le disque dans un fichier nommé `database.csv`. Cela permet de retrouver l'état exact des tables et des données lors des redémarrages.
+
+---
+
+#### **Fonctionnement Général**
+1. **Chargement des données (`load_from_disk`)** :
+   - Lors du démarrage, le programme charge le contenu de `database.csv` dans la mémoire.
+   - Les données sont structurées dans un B-tree et des structures associées pour permettre des manipulations rapides.
+
+2. **Sauvegarde des données (`save_to_disk`)** :
+   - Lors de la fermeture du programme ou après certaines commandes, le programme écrit l'état actuel du B-tree (et des données associées) dans `database.csv`.
+   - Cela garantit la persistance des modifications effectuées pendant l'exécution.
+
+---
+
+#### **Structure du fichier `database.csv`**
+Le fichier `database.csv` est utilisé pour stocker :
+- La définition des tables (ID, nom, colonnes et types de colonnes).
+- Les lignes insérées dans les tables.
+
+Exemple de contenu :
+```
+#### Table::1: users
+id::INT,name::STRING,email::STRING
+1,'Alice','alice@example.com'
+2,'Bob','bob@example.com'
+
+#### Table::2: products
+id::INT,name::STRING,price::INT
+1,'Laptop',1000
+2,'Phone',500
+```
+
+---
+
+#### **Détails des Fonctions**
+
+##### **1. `load_from_disk`**
+- Cette fonction est appelée au début de `main` :
+  ```c
+  load_from_disk("database.csv", &btree_root);
+  ```
+- Elle ouvre `database.csv` en mode lecture et charge les données dans la structure en mémoire.
+- Les tables sont ajoutées au B-tree, et leurs colonnes et données sont correctement restaurées.
+
+##### **2. `save_to_disk`**
+- Cette fonction est appelée à la fin de `main` :
+  ```c
+  save_to_disk("database.csv", btree_root);
+  ```
+- Elle ouvre `database.csv` en mode écriture (`w`) et écrit tout le contenu de la structure en mémoire (B-tree, tables et données) dans le fichier.
+- Cela garantit que toutes les modifications apportées pendant l'exécution sont sauvegardées.
+
+La fonction save_to_disk est appelée dans les commandes qui intéragissent en écriture avec database.csv :
+
+- `STATEMENT_EXIT` : Sauvegarde lors de la fermeture.
+- `STATEMENT_CREATETABLE` : Sauvegarde après la création d'une table.
+- `STATEMENT_INSERT` : Sauvegarde après l'insertion d'une ligne.
+- `STATEMENT_DELETETABLE` : Sauvegarde après la suppression d'une table.
+Cela garantit que les modifications en mémoire sont persistées immédiatement dans le fichier database.csv.
+---
+
+#### **Le rôle de `main` dans la persistance**
+
+Voici le rôle clé de `main` dans la persistance des données :
+1. **Chargement au démarrage :**
+   - `load_from_disk` initialise le B-tree (`btree_root`) et les structures associées à partir de `database.csv`.
+2. **Lancement de la REPL :**
+   - La boucle REPL (`repl`) permet à l'utilisateur d'interagir avec les données en mémoire.
+3. **Sauvegarde à la fermeture :**
+   - `save_to_disk` écrit les données mises à jour dans `database.csv` avant la fin du programme.
+
+---
+
+#### **Cas de Test pour la Persistance**
+1. **Création de tables et insertion de données :**
+   - Vérifiez que les données apparaissent correctement dans `database.csv`.
+   ```sql
+   create users (id::INT, name::STRING, email::STRING);
+   insert into users (id, name, email) values (1, 'Alice', 'alice@example.com');
+   ```
+
+2. **Redémarrage du programme :**
+   - Après un redémarrage, vérifiez que les données sont rechargées et manipulables :
+   ```sql
+   select * from users;
+   ```
+
+3. **Modification et sauvegarde :**
+   - Supprimez ou insérez des données, puis assurez-vous qu'elles sont sauvegardées dans `database.csv`.
 
 ---

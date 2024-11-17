@@ -6,15 +6,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>  // pour ssize_t
+#include <unistd.h>  
 #include <stddef.h>
 
-// initilisation de la racine de l'abre
+
 BTreeNode* btree_root = NULL;
 
 void execute_show_tree() {
-    // Reconstruit le B-arbre à chaque appel
-    btree_root = NULL;  // Réinitialiser l'arbre avant de le remplir
+    
+    btree_root = NULL;  
     build_btree_from_csv("database.csv");
     printf("B-Tree Structure:\n");
     traverse_btree(btree_root);
@@ -28,7 +28,7 @@ InputBuffer* new_input_buffer() {
 }
 
 void print_prompt() {
-    printf("\n\033[35mdb > \033[0m");  // \033[35m pour magenta, \033[0m pour réinitialiser la couleur
+    printf("\n\033[35mdb > \033[0m");  
 }
 
 
@@ -39,7 +39,7 @@ void read_input(InputBuffer* input_buffer) {
         exit(EXIT_FAILURE);
     }
     input_buffer->input_length = bytes_read - 1;
-    input_buffer->buffer[bytes_read - 1] = '\0';  // Remplacer le caractère de nouvelle ligne
+    input_buffer->buffer[bytes_read - 1] = '\0';  
 }
 
 void close_input_buffer(InputBuffer* input_buffer) {
@@ -60,13 +60,13 @@ MetaCommandResult do_meta_command(InputBuffer* input_buffer) {
 
 PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement) {
     if (strncmp(input_buffer->buffer, "create", 6) == 0) {
-        printf("Commande 'create' détectée.\n"); // Debug
+        printf("Commande 'create' détectée.\n"); 
         statement->type = STATEMENT_CREATETABLE;
 
         char columns_definition[256];
         if (sscanf(input_buffer->buffer, "create %s (%[^)])", statement->table_name, columns_definition) == 2) {
-            printf("Nom de la table : %s\n", statement->table_name);  // Debug
-            printf("Définition des colonnes : %s\n", columns_definition);  // Debug
+            printf("Nom de la table : %s\n", statement->table_name);  
+            printf("Définition des colonnes : %s\n", columns_definition);  
 
             char* token = strtok(columns_definition, ",");
             ColumnNode* last_node = NULL;
@@ -79,11 +79,11 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
                 }
 
                 char col_type_str[10];
-                // Gérer les deux formats de colonnes (avec `::` ou `:`)
+                
                 if (sscanf(token, "%[^:]::%s", new_node->name, col_type_str) == 2 ||
                     sscanf(token, "%[^:]:%s", new_node->name, col_type_str) == 2) {
                     
-                    // Définir le type de colonne
+                    
                     if (strcmp(col_type_str, "INT") == 0) {
                         new_node->type = TYPE_INT;
                     } else if (strcmp(col_type_str, "STRING") == 0 || strcmp(col_type_str, "string") == 0) {
@@ -95,7 +95,7 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
                     }
                     new_node->next = NULL;
 
-                    // Insérer le nœud dans la liste chaînée
+                    
                     if (last_node == NULL) {
                         statement->columns_head = new_node;
                     } else {
@@ -137,7 +137,7 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
     if (strncmp(input_buffer->buffer, "search", 6) == 0) {
         statement->type = STATEMENT_SEARCH;
         sscanf(input_buffer->buffer, "search %d", &statement->search_key);
-        printf("Recherche de la clé : %d\n", statement->search_key);  // Debug
+        printf("Recherche de la clé : %d\n", statement->search_key);  
         return PREPARE_SUCCESS;
     }
 
@@ -151,23 +151,23 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         struct ColumnValueNode* head = NULL;
         statement->type = STATEMENT_INSERT;
 
-        // Extract the table name, columns, and values
+        
         char columns[255], values[255];
         sscanf(input_buffer->buffer, "insert into %s (%[^)]) values (%[^)])", statement->table_name, columns, values);
-        printf("Table name: %s\n", statement->table_name);  // Debug
+        printf("Table name: %s\n", statement->table_name);  
 
-        // Split and clean columns
+        
         char* col_token = strtok(columns, ",");
         while (col_token != NULL) {
             trim_whitespace(col_token);
-            trim_type(col_token); // Remove types like ::INT
-            printf("Adding column: %s\n", col_token); // Debug
-            add_column_value_node(&head, col_token, NULL);  // Add to linked list
-            printf("Column added successfully.\n"); // Debug
+            trim_type(col_token); 
+            printf("Adding column: %s\n", col_token); 
+            add_column_value_node(&head, col_token, NULL);  
+            printf("Column added successfully.\n"); 
             col_token = strtok(NULL, ",");
         }
 
-        // Manual parsing of values to avoid issues with quotes
+        
         char* val_start = values;
         char val_buffer[255];
         struct ColumnValueNode* current = head;
@@ -175,40 +175,40 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         while (*val_start && current != NULL) {
             char* val_end = NULL;
 
-            // Handle quoted values
+            
             if (*val_start == '\'') {
-                val_start++;  // Move past the initial quote
-                val_end = strchr(val_start, '\'');  // Find closing quote
+                val_start++;  
+                val_end = strchr(val_start, '\'');  
             } else {
-                val_end = strchr(val_start, ',');  // Find comma delimiter for unquoted values
+                val_end = strchr(val_start, ',');  
             }
 
-            // If no end delimiter was found, assume it's the end of the string
+            
             if (val_end == NULL) {
                 val_end = val_start + strlen(val_start);
             }
 
-            // Copy value into buffer and trim it
+            
             strncpy(val_buffer, val_start, val_end - val_start);
             val_buffer[val_end - val_start] = '\0';
             trim_whitespace(val_buffer);
 
-            // Store the cleaned value in the linked list
+            
             strcpy(current->value, val_buffer);
-            printf("Assigned value '%s' to column '%s'\n", val_buffer, current->column_name); // Debug
+            printf("Assigned value '%s' to column '%s'\n", val_buffer, current->column_name); 
 
-            // Move to the next value and skip any trailing characters
+            
             val_start = (*val_end == '\'' || *val_end == ',') ? val_end + 1 : val_end;
             current = current->next;
         }
 
-        // Check if values correctly match the columns
+        
         if (current != NULL) {
             printf("Error: Number of values does not match the number of columns.\n");
             return PREPARE_UNRECOGNIZED_STATEMENT;
         }
 
-        // Proceed to file matching and reordering
+        
         FILE *file = fopen("database.csv", "r");
         if (file == NULL) {
             printf("Erreur : Impossible d'ouvrir le fichier database.csv.\n");
@@ -225,7 +225,7 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
                 if (strcmp(table_name, statement->table_name) == 0) {
                     table_found = 1;
 
-                    // Read the next line to get the column order
+                    
                     fgets(line, sizeof(line), file);
                     char* csv_col_token = strtok(line, ",");
                     struct ColumnValueNode* ordered_list = NULL;
@@ -233,11 +233,11 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
                     while (csv_col_token != NULL) {
                         trim_whitespace(csv_col_token);
                         trim_type(csv_col_token);
-                        printf("Matching CSV column: %s\n", csv_col_token); // Debug
+                        printf("Matching CSV column: %s\n", csv_col_token); 
 
                         struct ColumnValueNode* node = find_column_value_node(head, csv_col_token);
                         if (node != NULL) {
-                            printf("Found matching column: %s with value: %s\n", node->column_name, node->value); // Debug
+                            printf("Found matching column: %s with value: %s\n", node->column_name, node->value); 
                             add_column_value_node(&ordered_list, node->column_name, node->value);
                         } else {
                             printf("Erreur : Colonne '%s' manquante dans l'insertion.\n", csv_col_token);
@@ -248,7 +248,7 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
                         csv_col_token = strtok(NULL, ",");
                     }
 
-                    // Create the final string of ordered values
+                    
                     char formatted_values[MAX_LINE_LENGTH] = "";
                     struct ColumnValueNode* current = ordered_list;
                     while (current != NULL) {
@@ -273,63 +273,57 @@ PrepareResult prepare_statement(InputBuffer* input_buffer, Statement* statement)
         }
     }
 
-    /* ########################################## */
-    /*!! Commande SELECT !!*/
 
-    /* SELECT * : OK
-    * SELECT column_name : OK
-    * SELECT multiple columns : OK
-    */
 
-        if (strncmp(input_buffer->buffer, "select", 6) == 0) {
-        statement->type = STATEMENT_SELECT;
+    if (strncmp(input_buffer->buffer, "select", 6) == 0) {
+    statement->type = STATEMENT_SELECT;
 
-        // Extract columns and table name
-        char columns[255];
-        char table_name[255];
-        int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
+    
+    char columns[255];
+    char table_name[255];
+    int args = sscanf(input_buffer->buffer, "select %[^ ] from %s", columns, table_name);
 
-        if (args == 2) {
-            // Remove any semicolon at the end of the table name
-            char* semicolon_pos = strchr(table_name, ';');
-            if (semicolon_pos != NULL) {
-                *semicolon_pos = '\0';
-            }
-
-            // Split the columns by comma and store them in the Statement struct
-            char* col_token = strtok(columns, ",");
-            int col_index = 0;
-
-            while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
-                trim_whitespace(col_token);  // Remove any extra spaces around the column name
-                strcpy(statement->selected_columns[col_index], col_token);
-                col_index++;
-                col_token = strtok(NULL, ",");
-            }
-
-            statement->num_selected_columns = col_index;
-            strcpy(statement->table_name, table_name);
-            printf("Parsed table name: %s\n", statement->table_name);  // Debug output
-            for (int i = 0; i < col_index; i++) {
-                printf("Parsed column %d: %s\n", i, statement->selected_columns[i]);  // Debug output
-            }
-            return PREPARE_SUCCESS;
+    if (args == 2) {
+        
+        char* semicolon_pos = strchr(table_name, ';');
+        if (semicolon_pos != NULL) {
+            *semicolon_pos = '\0';
         }
 
-        printf("Error: Could not parse the SELECT statement.\n");
-        return PREPARE_UNRECOGNIZED_STATEMENT;
+        
+        char* col_token = strtok(columns, ",");
+        int col_index = 0;
+
+        while (col_token != NULL && col_index < MAX_SELECTED_COLUMNS) {
+            trim_whitespace(col_token);  
+            strcpy(statement->selected_columns[col_index], col_token);
+            col_index++;
+            col_token = strtok(NULL, ",");
+        }
+
+        statement->num_selected_columns = col_index;
+        strcpy(statement->table_name, table_name);
+        printf("Parsed table name: %s\n", statement->table_name);  
+        for (int i = 0; i < col_index; i++) {
+            printf("Parsed column %d: %s\n", i, statement->selected_columns[i]);  
+        }
+        return PREPARE_SUCCESS;
     }
-        if (strncmp(input_buffer->buffer, "delete", 6) == 0) {
+
+    printf("Error: Could not parse the SELECT statement.\n");
+    return PREPARE_UNRECOGNIZED_STATEMENT;
+}
+    
+    if (strncmp(input_buffer->buffer, "delete", 6) == 0) {
         statement->type = STATEMENT_DELETETABLE;
         sscanf(input_buffer->buffer, "delete table %s", statement->table_name);
         return PREPARE_SUCCESS;
     }
-    // Default case for unrecognized commands
+    
     return PREPARE_UNRECOGNIZED_STATEMENT;
 }
 
 
-/* ########################################## */
 
 
 void execute_statement(Statement* statement, InputBuffer* input_buffer, const char* filename) {
@@ -341,10 +335,11 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
         break;
     case (STATEMENT_CREATETABLE):
             if (create_table(statement->table_name, statement->columns_head, statement->column_count) == 0) {
-                printf("Table '%s' créée avec succès.\n", statement->table_name);
-                //save_to_disk(filename, btree_root);
+                printf(COLOR_GREEN "Table '%s' créée avec succès.\n" COLOR_RESET, statement->table_name);
+
+                save_to_disk(filename, btree_root);
             } else {
-                printf("Erreur lors de la création de la table '%s'.\n", statement->table_name);
+                printf(COLOR_RED "Erreur lors de la création de la table '%s'.\n" COLOR_RESET, statement->table_name);
             }
             break;
     case (STATEMENT_DESCRIBE):
@@ -352,7 +347,7 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
             break;
     case (STATEMENT_SELECT):
             execute_select(statement, filename);
-            //printf("select command detected");
+            
             break;
     case (STATEMENT_SHOW_TREE):
             execute_show_tree();
@@ -360,11 +355,11 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
     case STATEMENT_SEARCH:
             if (btree_root == NULL) {
                 printf("Initialisation du B-arbre à partir de 'database.csv'...\n");
-                build_btree_from_csv("database.csv"); // Initialise l'arbre avant la recherche
+                build_btree_from_csv("database.csv"); 
             }
             BTreeNode* result = search_btree(btree_root, statement->search_key);
             if (result == NULL) {
-                printf("Table with ID %d not found.\n", statement->search_key);
+                printf(COLOR_RED "Table with ID %d not found.\n" COLOR_RESET, statement->search_key);
             }
             break;
     case (STATEMENT_INSERT):
@@ -378,20 +373,20 @@ void execute_statement(Statement* statement, InputBuffer* input_buffer, const ch
     case (STATEMENT_SHOWTABLES):
             printf("Liste des tables disponibles :\n");
 
-            // Ouvrir le fichier contenant les tables (par exemple, database.csv)
+            
             FILE* file = fopen("database.csv", "r");
             if (file == NULL) {
-                perror("Erreur lors de l'ouverture du fichier database.csv");
+                perror(COLOR_RED "Erreur lors de l'ouverture du fichier database.csv" COLOR_RESET);
                 break;
             }
 
             char line[MAX_LINE_LENGTH];
             while (fgets(line, sizeof(line), file)) {
                 if (strncmp(line, "#### Table::", 12) == 0) {
-                    // Extraire le nom de la table après le dernier ":"
-                    char* table_name = strrchr(line, ':') + 1; // Pointer après le dernier ":"
+                    
+                    char* table_name = strrchr(line, ':') + 1; 
                     if (table_name != NULL) {
-                        printf("- %s", table_name); // Afficher le nom de la table
+                        printf("- %s", table_name); 
                     }
                 }
             }
@@ -454,33 +449,33 @@ void free_columns_list(ColumnNode* head) {
 
 
 
-// Add a column-value pair to the linked list
+
 void add_column_value_node(struct ColumnValueNode** head, const char* column_name, const char* value) {
-    // Allocate memory for a new node
+    
     struct ColumnValueNode* new_node = (struct ColumnValueNode*)malloc(sizeof(struct ColumnValueNode));
     if (new_node == NULL) {
-        printf("Error: Memory allocation failed for new node.\n");
-        exit(1);  // Exit if allocation fails
+        printf(COLOR_RED "Error: Memory allocation failed for new node.\n" COLOR_RESET);
+        exit(1);  
     }
 
-    // Ensure column name and value are copied safely
+    
     strncpy(new_node->column_name, column_name, sizeof(new_node->column_name) - 1);
-    new_node->column_name[sizeof(new_node->column_name) - 1] = '\0';  // Null-terminate to avoid overflow
+    new_node->column_name[sizeof(new_node->column_name) - 1] = '\0';  
 
     if (value != NULL) {
         strncpy(new_node->value, value, sizeof(new_node->value) - 1);
-        new_node->value[sizeof(new_node->value) - 1] = '\0';  // Null-terminate to avoid overflow
+        new_node->value[sizeof(new_node->value) - 1] = '\0';  
     } else {
-        new_node->value[0] = '\0';  // Initialize as empty string if no value is provided
+        new_node->value[0] = '\0';  
     }
 
-    // Set the next pointer to the current head and then update head to the new node
+    
     new_node->next = *head;
     *head = new_node;
 }
 
 
-// Find a column by name in the linked list
+
 struct ColumnValueNode* find_column_value_node(struct ColumnValueNode* head, char* column_name) {
     struct ColumnValueNode* current = head;
     while (current != NULL) {
@@ -493,23 +488,23 @@ struct ColumnValueNode* find_column_value_node(struct ColumnValueNode* head, cha
 }
 
 void trim_whitespace(char* str) {
-    // Trim leading spaces
+    
     while (isspace((unsigned char)*str)) str++;
     
-    // Trim trailing spaces and quotes
+    
     char* end = str + strlen(str) - 1;
     while (end > str && (isspace((unsigned char)*end) || *end == '\'' || *end == '\"')) end--;
     
-    // Write new null terminator
+    
     *(end + 1) = '\0';
 }
 
 
-// Trim the type information (e.g., ::INT) from the column name
+
 void trim_type(char* column_name) {
     char* type_ptr = strstr(column_name, "::");
     if (type_ptr != NULL) {
-        *type_ptr = '\0';  // Cut the string at the "::" to remove the type
+        *type_ptr = '\0';  
     }
 }
 
@@ -518,17 +513,17 @@ void trim_type(char* column_name) {
 void print_table_in_frame(const char* table_name) {
     int length = strlen(table_name);
     
-    // Affichage de la ligne supérieure
+    
     printf("+");
     for (int i = 0; i < length + 2; i++) {
         printf("-");
     }
     printf("+\n");
 
-    // Affichage du contenu (nom de la table)
+    
     printf("| %s |\n", table_name);
 
-    // Affichage de la ligne inférieure
+    
     printf("+");
     for (int i = 0; i < length + 2; i++) {
         printf("-");
@@ -536,28 +531,28 @@ void print_table_in_frame(const char* table_name) {
     printf("+\n");
 }
 
-// Fonction pour vérifier si une table existe déjà dans le fichier CSV
+
 int table_exists_in_file(const char* filename, const char* table_name) {
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
-        return 0;  // Si le fichier n'existe pas, la table n'existe pas non plus
+        return 0;  
     }
 
     char line[MAX_LINE_LENGTH];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, DELIMITER, strlen(DELIMITER)) == 0) {
-            // Vérification si c'est la table recherchée
+            
             char existing_table_name[255];
             sscanf(line, "#### Table: %254[^\n]", existing_table_name);
             if (strcmp(existing_table_name, table_name) == 0) {
                 fclose(file);
-                return 1;  // La table existe déjà
+                return 1;  
             }
         }
     }
 
     fclose(file);
-    return 0;  // La table n'existe pas
+    return 0;  
 }
 
 void repl() {
@@ -583,7 +578,7 @@ void repl() {
                 printf("Tapez 'man' ou 'help' pour voir les commandes disponibles.\n");
                 continue;
         }
-        const char* filename = "database.csv";  // Define the filename
+        const char* filename = "database.csv";  
         execute_statement(&statement, input_buffer, filename);
         printf("Executed.\n");
     }

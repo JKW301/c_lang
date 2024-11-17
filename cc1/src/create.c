@@ -7,14 +7,14 @@
 #include "create.h"
 #include "btree.h"
 
-// Déclaration de la racine du B-arbre
+
 extern BTreeNode* btree_root;
 
-// Fonction pour générer un ID unique pour la table (peut être améliorée si nécessaire)
+
 int generate_table_id(const char* filename) {
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
-        return 1;  // Commence les IDs à 1 si le fichier n'existe pas
+        return 1;  
     }
 
     int max_id = 0;
@@ -29,14 +29,14 @@ int generate_table_id(const char* filename) {
         }
     }
     fclose(file);
-    return max_id + 1;  // ID unique suivant
+    return max_id + 1;  
 }
 
 int create_table(const char* table_name, ColumnNode* columns_head, int column_count) {
     (void) column_count;
     FILE* file = fopen("database.csv", "a");
     if (file == NULL) {
-        perror("Erreur lors de l'ouverture du fichier database.csv");
+        perror(COLOR_RED "Erreur lors de l'ouverture du fichier database.csv" COLOR_RESET);
         return -1;
     }
 

@@ -2,7 +2,7 @@
 #define BTREE_H
 #include "repl.h"
 
-#define MAX_KEYS 3  // L'ordre du B-arbre (choisissez un ordre en fonction des besoins)
+#define MAX_KEYS 3  
 
 typedef struct BTreeNode {
     int keys[MAX_KEYS];              // Les ID des tables
@@ -14,9 +14,7 @@ typedef struct BTreeNode {
 
 
 
-// Fonctions prototypes
 BTreeNode* create_btree_node(int is_leaf);
-//void insert_btree(BTreeNode** root, int key, const char* table_name);
 
 void insert_btree(BTreeNode** root, int key, const char* table_name);
 void split_btree_node(BTreeNode** root, BTreeNode* node);
@@ -28,4 +26,8 @@ void build_btree_from_csv(const char* filename);
 BTreeNode* search_btree(BTreeNode* root, int key);
 
 
-#endif // BTREE_H
+void save_to_disk(const char* filename, const BTreeNode* root);
+void load_from_disk(const char* filename, BTreeNode** root);
+void serialize_btree(FILE* file, const BTreeNode* node);
+void deserialize_btree(FILE* file, BTreeNode** node);
+#endif

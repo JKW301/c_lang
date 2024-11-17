@@ -4,66 +4,53 @@
 #include "delete.h"
 #include "repl.h"
 
-
 void execute_delete_table(Statement* statement, const char* filename) {
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-        printf("Error: Unable to open the file %s.\n", filename);
-        return;
-    }
+    FILE* file = fopen(filename, "r");
+    FILE* temp_file = fopen("temp_database.csv", "w");
 
-    FILE *temp_file = fopen("temp_database.csv", "w");
-    if (temp_file == NULL) {
-        printf("Error: Unable to create a temporary file.\n");
-        fclose(file);
+    if (!file || !temp_file) {
+        perror(COLOR_RED "Erreur d'ouverture du fichier" COLOR_RESET);
+        if (file) fclose(file);
+        if (temp_file) fclose(temp_file);
         return;
     }
 
     char line[MAX_LINE_LENGTH];
     int table_found = 0;
-    int within_table = 0;
-
-    // Loop through each line, copying content except for the target table
+    int skip_table = 0; 
     while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "#### Table:", 11) == 0) {
-            char table_name[255];
-            sscanf(line, "#### Table: %s", table_name);
+        if (strncmp(line, "#### Table::", 12) == 0) {
+            char existing_table_name[255];
+            sscanf(line, "#### Table::%*d: %254[^\n]", existing_table_name);
 
-            if (strcmp(table_name, statement->table_name) == 0) {
+            printf("Checking table: '%s' against '%s'\n", existing_table_name, statement->table_name);
+
+            if (strcmp(existing_table_name, statement->table_name) == 0) {
                 table_found = 1;
-                within_table = 1;
-                continue;  // Skip the table header line
+                skip_table = 1; 
+                continue;       
             } else {
-                within_table = 0;
+                skip_table = 0; 
             }
         }
 
-        // Skip lines within the table to be deleted
-        if (within_table) {
-            // Stop skipping if a new table header is encountered
-            if (strncmp(line, "#### Table:", 11) == 0) {
-                within_table = 0;
-            } else {
-                continue;
-            }
+        if (!skip_table) {
+            fprintf(temp_file, "%s", line);
         }
-
-        // Write the current line to the temporary file
-        fputs(line, temp_file);
     }
 
     fclose(file);
     fclose(temp_file);
 
-    // Check if the table was found
     if (!table_found) {
-        printf("Error: Table '%s' not found.\n", statement->table_name);
-        remove("temp_database.csv");  // Remove temp file if table not found
+        printf(COLOR_RED "Erreur : La table '%s' n'a pas été trouvée.\n" COLOR_RESET, statement->table_name);
+        remove("temp_database.csv");
         return;
     }
 
-    // Replace the original file with the temporary file
-    remove(filename);
-    rename("temp_database.csv", filename);
-    printf("Table '%s' deleted successfully.\n", statement->table_name);
+    if (rename("temp_database.csv", filename) != 0) {
+        perror(COLOR_RED "Erreur lors du renommage du fichier temporaire" COLOR_RESET);
+    } else {
+        printf(COLOR_GREEN "Succès : La table '%s' a été supprimée avec succès.\n" COLOR_RESET, statement->table_name);
+    }
 }
